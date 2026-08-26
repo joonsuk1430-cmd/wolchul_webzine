@@ -194,6 +194,18 @@ img{max-width:100%}
 .ftag:hover{border-color:var(--c1);color:var(--c1)}
 .ftag.on{background:var(--c1);border-color:var(--c1);color:#fff}
 
+/* 월별 필터 */
+.month-row{width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  border-top:1px dashed var(--line);padding-top:11px;margin-top:3px}
+.month-row.hide{display:none}
+.month-lbl{font-size:.74rem;font-weight:800;color:var(--ink-s);flex-shrink:0}
+.month-tags{display:flex;gap:6px;flex-wrap:wrap}
+.mtag{border:1.5px solid var(--line);background:var(--white);color:var(--ink-m);
+  border-radius:20px;padding:4px 14px;font-size:.76rem;font-weight:700;transition:all .18s}
+.mtag:hover{border-color:var(--acc);color:var(--acc)}
+.mtag.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.mtag .mcnt{font-size:.68rem;opacity:.65;margin-left:4px;font-weight:600}
+
 /* ── 특집 ── */
 .feat-wrap{margin-bottom:48px}
 .feat{display:grid;grid-template-columns:1.1fr 1fr;gap:0;border-radius:var(--r-l);
@@ -582,6 +594,12 @@ footer{background:#0d2818;color:rgba(255,255,255,.65);padding:52px 0 28px}
       <button class="ftag" onclick="setTag('후원봉사',this)">후원·봉사</button>
       <button class="ftag" onclick="setTag('소식',this)">소식</button>
     </div>
+
+    <!-- 월별 -->
+    <div class="month-row hide" id="monthRow">
+      <span class="month-lbl">📅 월별</span>
+      <div class="month-tags" id="monthTags"></div>
+    </div>
   </div>
 </div>
 
@@ -937,7 +955,7 @@ const SAMPLE=[
 ];
 
 /* ── 상태 ── */
-let ARTS=[], curTag='all', q='', visible=9;
+let ARTS=[], curTag='all', q='', visible=9, curMonth='all', monthSig='';
 let ttsPlay=false, ttsUtt=null;
 
 /* ── 카테고리 스타일 ── */
@@ -998,15 +1016,64 @@ window.addEventListener('load', () => {
 });
 
 /* ── 렌더 ── */
+/* 기사 날짜에서 "2026-01" 형태의 월 키를 뽑아냅니다 */
+function monthKey(a){
+  const d = (a && a.date) || '';
+  return /^\d{4}-\d{2}/.test(d) ? d.slice(0,7) : '';
+}
+
 function filtered() {
   return ARTS.filter(a => {
     const dc = dispCat(a.cat);
     const mt = curTag==='all' || a.cat===curTag || dc===curTag;
+    const mm = curMonth==='all' || monthKey(a)===curMonth;
     const body = (a.content||'').replace(/<[^>]*>/g,'');
     const mq = !q || (a.title||'').includes(q) || (a.summary||'').includes(q)
              || dc.includes(q) || body.includes(q);
-    return mt && mq;
+    return mt && mm && mq;
   });
+}
+
+/* 등록된 기사의 월만 모아 버튼을 만듭니다 */
+function buildMonths(){
+  const cnt = {};
+  ARTS.forEach(a => { const k = monthKey(a); if(k) cnt[k] = (cnt[k]||0)+1; });
+  const keys = Object.keys(cnt).sort().reverse();   // 최신 월이 왼쪽
+  const sig  = keys.join(',');
+  if(sig === monthSig) return;                      // 달라진 게 없으면 그대로 둠
+  monthSig = sig;
+
+  const row = document.getElementById('monthRow');
+  const box = document.getElementById('monthTags');
+  if(!row || !box) return;
+
+  // 월이 하나뿐이거나 없으면 월별 줄 자체를 숨깁니다
+  if(keys.length < 2){ row.classList.add('hide'); curMonth='all'; box.innerHTML=''; return; }
+  row.classList.remove('hide');
+
+  // 선택해둔 월이 사라졌으면 전체로 되돌립니다
+  if(curMonth!=='all' && !keys.includes(curMonth)) curMonth='all';
+
+  const oneYear = new Set(keys.map(k => k.slice(0,4))).size === 1;
+  const label = k => {
+    const [y,m] = k.split('-');
+    return oneYear ? `${+m}월` : `${y.slice(2)}년 ${+m}월`;
+  };
+
+  let html = `<button class="mtag${curMonth==='all'?' on':''}" onclick="setMonth('all',this)">전체</button>`;
+  keys.forEach(k => {
+    html += `<button class="mtag${curMonth===k?' on':''}" onclick="setMonth('${k}',this)">`
+          + `${label(k)}<span class="mcnt">${cnt[k]}</span></button>`;
+  });
+  box.innerHTML = html;
+}
+
+function setMonth(m, btn){
+  curMonth = m; visible = 9;
+  document.querySelectorAll('.mtag').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  render();
+  document.getElementById('articles').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function thumbOf(a){
@@ -1020,8 +1087,9 @@ function fitThumb(im){
 }
 
 function render() {
+  buildMonths();
   const list = filtered();
-  const showFeat = curTag==='all' && !q;
+  const showFeat = curTag==='all' && !q && curMonth==='all';
   const featArt  = ARTS.find(a => a.featured) || ARTS[0];
 
   // 특집
@@ -1111,6 +1179,8 @@ function onSearch() {
 function clearSearch() {
   q = ''; document.getElementById('srch').value = '';
   document.getElementById('clrBtn').style.display = 'none';
+  curMonth = 'all';
+  document.querySelectorAll('.mtag').forEach((b,i) => b.classList.toggle('on', i===0));
   visible = 9; render();
 }
 
