@@ -1110,7 +1110,7 @@ function openSpDetail(id){
 
 
 /* ═══════ 후원신청서 출력 — 원본 PDF 양식 위에 값을 얹는 방식 ═══════
-   좌표는 원본 이미지(1489×2105 기준)를 백분율로 환산한 값입니다. */
+   좌표는 원본 양식 이미지(1489×2105)에서 표의 선과 네모칸을 직접 측정한 값입니다. */
 function printSpForm(){
   const s = SPONSORS.find(x => x.id === curSpId);
   if(!s){ toast('신청 정보를 찾을 수 없습니다.','err'); return; }
@@ -1118,16 +1118,14 @@ function printSpForm(){
   const E = v => String(v==null?'':v)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-  const W=1489, H=2105;                       // 원본 이미지 픽셀 크기
-  const px = (x,y) => `left:${(x/W*100).toFixed(3)}%;top:${(y/H*100).toFixed(3)}%`;
+  const W=1489, H=2105;
+  const pc = (x,y) => `left:${(x/W*100).toFixed(3)}%;top:${(y/H*100).toFixed(3)}%`;
   const put = [];
-  // 글자 얹기
-  const T = (x,y,txt,size,extra) => {
-    if(txt==null || txt==='') return;
-    put.push(`<div class="f" style="${px(x,y)};font-size:${size||15}px;${extra||''}">${E(txt)}</div>`);
-  };
-  // 체크 표시 얹기 (네모칸 위에 겹쳐 그림)
-  const CK = (x,y) => put.push(`<div class="ck" style="${px(x,y)}">✔</div>`);
+  const T  = (x,y,txt,size) => { if(txt==null||txt==='')return;
+    put.push(`<div class="f" style="${pc(x,y)};font-size:${size||15}px">${E(txt)}</div>`); };
+  const TC = (x,y,txt,size) => { if(txt==null||txt==='')return;
+    put.push(`<div class="f c" style="${pc(x,y)};font-size:${size||15}px">${E(txt)}</div>`); };
+  const CK = (x,y) => put.push(`<div class="ck" style="${pc(x,y)}">✔</div>`);
 
   const d = new Date(s.consentAt || s.createdAt || Date.now());
   const ok = !isNaN(d);
@@ -1139,68 +1137,66 @@ function printSpForm(){
         isGoods=s.type==='goods', isVol=s.type==='vol';
   const hasCms = !!(s.cmsBank || s.cmsAccount || s.cmsOwner);
 
-  /* ── 후원자 인적사항 ── */
-  T(300, 300, s.name,  17);          // 성명(상호명)
-  T(650, 300, (s.jumin && s.jumin!=='-') ? s.jumin : '', 15);  // 주민등록번호
-  T(300, 372, s.phone, 16);          // 전화번호
-  T(300, 414, s.email, 15);          // E-mail
-  T(300, 452, s.addr,  15);          // 주소
+  /* 후원자 인적사항 — 행 중앙 314 / 371 / 408 / 447 / 493 */
+  T(300, 314, s.name, 17);
+  T(645, 314, (s.jumin && s.jumin!=='-') ? s.jumin : '', 15);
+  T(300, 371, s.phone, 16);
+  T(300, 408, s.email, 15);
+  T(300, 447, s.addr,  15);
 
-  /* ── 후원금 관련 사항 ── */
-  if(isReg)  CK(371, 542);           // 정기후원
-  if(isOnce) CK(553, 542);           // 일회성
+  /* 후원금 관련 사항 — 네모칸 실측 좌표 */
+  if(isReg)  CK(380, 544);
+  if(isOnce) CK(564, 544);
 
-  if(isReg && !hasCms) CK(371, 597); // 통장입금
-  if(isReg &&  hasCms) CK(553, 597); // CMS
-  if(isOnce)           CK(901, 597); // 직접전달
+  if(isReg && !hasCms) CK(380, 596);
+  if(isReg &&  hasCms) CK(564, 596);
+  if(isOnce)           CK(905, 596);
 
   const amtNum = parseInt(String(s.amount||'').replace(/[^0-9]/g,'')) || 0;
-  const slot = {10000:368, 20000:485, 30000:601, 50000:718}[amtNum];
-  if(slot) CK(slot, 643);
+  const slot = {10000:380, 20000:497, 30000:614, 50000:732}[amtNum];
+  if(slot) CK(slot, 641);
   else if(amtNum){
-    CK(835, 643);                                        // 기타
-    T(1035, 645, amtNum.toLocaleString(), 15);           // 일금 ___원
-    T(1255, 645, amtNum.toLocaleString(), 15);           // (₩ ___원)
+    CK(849, 641);
+    TC(1075, 641, amtNum.toLocaleString(), 15);
+    TC(1270, 641, amtNum.toLocaleString(), 15);
   }
 
-  /* CMS 후원금융정보 */
-  T(462, 696, s.cmsBank,    15);
-  T(680, 696, s.cmsAccount, 15);
-  T(1030, 722, s.cmsOwner,  14);
-  T(1240, 722, s.cmsDay || '', 14);   // 매월 [ ] 일
+  /* CMS 후원금융정보 — 행 660~738 */
+  T(478, 690, s.cmsBank,    14);
+  T(700, 690, s.cmsAccount, 14);
+  T(1060, 690, s.cmsOwner,  14);
+  TC(1271, 719, s.cmsDay || '', 14);
 
   /* 후원금 종류 */
-  if(s.account==='undesignated') CK(378, 766);
-  if(s.account==='designated')   CK(378, 810);
+  if(s.account==='undesignated') CK(380, 759);
+  if(s.account==='designated')   CK(380, 803);
 
-  /* 지정후원내용 */
-  T(300, 862, (s.account==='designated') ? (s.message||'') : '', 14);
+  /* 지정후원내용 — 행 중앙 855 */
+  T(300, 855, (s.account==='designated') ? (s.message||'') : '', 15);
 
-  /* ── 후원물품 관련 사항 ── */
-  if(isGoods){
-    CK(760, 1049);                                   // 기타( )
-    T(880, 1052, s.goodsInfo, 14);
-  }
-  T(440, 1105, isGoods ? (s.goodsInfo||'') : (isVol ? (s.volInfo||'') : ''), 14);
+  /* 후원물품 */
+  if(isGoods){ CK(761, 1049); T(880, 1049, s.goodsInfo, 14); }
+  T(440, 1148, isGoods ? (s.goodsInfo||'') : (isVol ? (s.volInfo||'') : ''), 15);
 
-  /* ── 개인정보 동의서 (동의함에 체크) ── */
-  CK(985, 1198);                       // 필수정보
-  if(isReg) CK(985, 1249);             // CMS정보
-  CK(985, 1300);                       // 민감정보
+  /* 개인정보 동의서 — 동의함 칸 */
+  CK(991, 1200);
+  if(isReg) CK(991, 1252);
+  CK(992, 1304);
 
-  /* ── 날짜 2곳 ── */
-  T(645, 1772, yy, 16); T(752, 1772, mm, 16); T(838, 1772, dd, 16);
-  T(645, 1932, yy, 16); T(752, 1932, mm, 16); T(838, 1932, dd, 16);
+  /* 날짜 2곳 */
+  /* "20 __ 년 __ 월 __ 일" 의 빈칸 3곳 (실측: 20=595~624, 년=684, 월=777, 일=872) */
+  TC(654, 1774, yy, 16); TC(740, 1774, mm, 16); TC(835, 1774, dd, 16);
+  TC(654, 1932, yy, 16); TC(740, 1932, mm, 16); TC(835, 1932, dd, 16);
 
-  /* ── 본인(대리인) 옆 성명 + 서명 ── */
-  T(700, 1965, s.name, 17, 'font-weight:600');
+  /* 본인(대리인): 라벨이 690에서 끝나므로 그 뒤에 성명 */
+  T(706, 1969, s.name, 17);
 
+  /* 서명 — "(서명 또는 인)"(1080~1248) 바로 위 여백에 */
   if(s.signature){
-    // "(서명 또는 인)" 칸 위에 서명 이미지를 크기 맞춰 얹습니다
-    put.push(`<img class="sig" src="${E(s.signature)}" alt="서명" style="${px(1150,1943)}">`);
+    put.push(`<img class="sig" src="${E(s.signature)}" alt="서명" style="${pc(1164,1938)}">`);
   }
 
-  const base = new URL('images/form-sponsor.png', location.href).href;
+  const bg = new URL('images/form-sponsor.png', location.href).href;
 
   const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
 <title>후원신청서 — ${E(s.name||'')}</title>
@@ -1218,12 +1214,12 @@ body{font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-seri
 .sheet{position:relative;width:900px;margin:0 auto;background:#fff;
   box-shadow:0 4px 20px rgba(0,0,0,.15)}
 .sheet img.bg{display:block;width:100%;height:auto}
-.f{position:absolute;transform:translateY(-50%);white-space:nowrap;
-  color:#111;line-height:1}
-.ck{position:absolute;transform:translate(-1px,-50%);color:#0b3d91;
-  font-size:16px;font-weight:900;line-height:1}
+.f{position:absolute;transform:translateY(-50%);white-space:nowrap;color:#111;line-height:1}
+.f.c{transform:translate(-50%,-50%)}
+.ck{position:absolute;transform:translate(-50%,-50%);color:#111;
+  font-size:17px;font-weight:900;line-height:1}
 img.sig{position:absolute;transform:translate(-50%,-50%);
-  height:38px;width:auto;max-width:145px;object-fit:contain;opacity:.92}
+  height:34px;width:auto;max-width:140px;object-fit:contain}
 @media print{
   body{background:#fff;padding:0}
   .bar{display:none}
@@ -1239,16 +1235,14 @@ img.sig{position:absolute;transform:translate(-50%,-50%);
 </div>
 
 <div class="sheet">
-  <img class="bg" src="${base}" alt="후원신청서 양식">
+  <img class="bg" src="${bg}" alt="후원신청서 양식">
   ${put.join('\n  ')}
 </div>
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=980,height=1000,scrollbars=yes');
   if(!w){ toast('팝업이 차단되었습니다. 주소창 오른쪽의 팝업 허용을 켜주세요.','err'); return; }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 function closeSpDetail(){
