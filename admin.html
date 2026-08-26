@@ -1053,7 +1053,11 @@ function openSpDetail(id){
     ['후원 금액', amt],
     ['입금 계좌', s.accountLabel||'—'],
   ];
-  if(s.type==='goods') sec1.push(['물품 정보', s.goodsInfo||'—']);
+  if(s.type==='goods'){
+    const kinds = Array.isArray(s.goodsKinds) ? s.goodsKinds : [];
+    sec1.push(['물품 종류', kinds.length ? kinds.join(', ') : '—']);
+    sec1.push(['물품 정보', s.goodsInfo||'—']);
+  }
   if(s.type==='vol') sec1.push(['봉사 내용', s.volInfo||'—']);
 
   // 2. 신청인(기부자) 정보
@@ -1180,8 +1184,9 @@ function printSpForm(){
   if(slot) CK(slot, 641);
   else if(amtNum){
     CK(849, 641);
-    TC(1075, 641, amtNum.toLocaleString(), 15);
-    TC(1270, 641, amtNum.toLocaleString(), 15);
+    // 빈칸 실측: 일금(~976)~원(₩(1090~) / 원(₩(~1149)~원)(1275~)
+    TC(1032, 641, amtNum.toLocaleString(), 15, 108);
+    TC(1211, 641, amtNum.toLocaleString(), 15, 120);
   }
 
   /* CMS 후원금융정보 — 행 660~738 */
@@ -1205,7 +1210,25 @@ function printSpForm(){
   T(370, 855, (isMoney && s.account==='designated') ? (s.message||'') : '', 15, 1330);
 
   /* 후원물품 */
-  if(isGoods){ CK(761, 1049); T(880, 1049, s.goodsInfo, 14); }
+  if(isGoods){
+    // 신청 시 고른 물품 종류에 체크 (네모칸 실측 좌표)
+    const kinds = Array.isArray(s.goodsKinds) ? s.goodsKinds : [];
+    const box = { '식자재':[444,1008], '생활용품':[574,1008],
+                  '사무용품':[731,1008], '가전제품':[888,1008],
+                  '의료용품':[443,1049] };
+    let etcTxt = '';
+    kinds.forEach(k => {
+      const key = String(k).replace(/\(.*$/,'').trim();
+      if(box[key]) CK(box[key][0], box[key][1]);
+      else if(/^기타/.test(k)) etcTxt = String(k).replace(/^기타[:：]?\s*/,'');
+    });
+    // 종류를 하나도 안 골랐거나 기타면 "기타( )"에 체크
+    const hasEtc = kinds.some(k => /^기타/.test(k));
+    if(hasEtc || kinds.length === 0){
+      CK(761, 1049);
+      T(880, 1049, etcTxt || s.goodsInfo, 14, 1180);
+    }
+  }
   T(440, 1096, isGoods ? (s.goodsInfo||'') : (isVol ? (s.volInfo||'') : ''), 15, 1330);
 
   /* 개인정보 동의서 — 동의함 칸 */
@@ -1318,7 +1341,7 @@ function exportCsv(){
   const ok = confirm('⚠️ 개인정보 보호 안내\n\n다운로드되는 파일에는 후원자의 이름, 연락처 등 개인정보가 포함됩니다.\n\n- 업무 목적 외 사용을 금지합니다\n- 파일을 외부에 유출하거나 공유하지 마세요\n- 사용 후 안전하게 삭제해 주세요\n\n위 내용에 동의하고 다운로드하시겠습니까?');
   if(!ok) return;
   const RECEIPT_CSV={personal:'개인용',org:'사업자/단체용',none:'발행불필요'};
-  const headers=['신청일시','유형','금액','입금계좌','이름','연락처','이메일','팩스','주소구분','주소','주민등록번호/사업자등록번호','CMS금융기관','CMS계좌번호','CMS예금주','예금주생년월일/사업자번호','정기이체일','영수증구분','물품정보','봉사내용','전달말씀','소식수신동의','상태'];
+  const headers=['신청일시','유형','금액','입금계좌','이름','연락처','이메일','팩스','주소구분','주소','주민등록번호/사업자등록번호','CMS금융기관','CMS계좌번호','CMS예금주','예금주생년월일/사업자번호','정기이체일','영수증구분','물품종류','물품정보','봉사내용','전달말씀','소식수신동의','상태'];
   const c=v=>('"'+String(v==null?'':v).replace(/"/g,'""')+'"');
   const rows=SPONSORS.map(s=>[
     spWhen(s),
@@ -1330,7 +1353,7 @@ function exportCsv(){
     (s.jumin&&s.jumin!=='-')?s.jumin:'',
     s.cmsBank||'', s.cmsAccount||'', s.cmsOwner||'', s.cmsOwnerId||'', s.cmsDay||'',
     RECEIPT_CSV[s.receiptType]||s.receiptType||'',
-    s.goodsInfo||'', s.volInfo||'',
+    (Array.isArray(s.goodsKinds)?s.goodsKinds.join(' / '):''), s.goodsInfo||'', s.volInfo||'',
     s.message||'',
     s.marketingConsent?'동의':'미동의',
     s.status||'신청'

@@ -140,6 +140,16 @@ main{max-width:720px;margin:0 auto;padding:32px 24px 64px}
 .acc-radio-card.on .acc-radio-top{color:var(--c1)}
 .acc-radio-num{font-size:.86rem;font-weight:900;color:var(--c2);font-family:monospace;letter-spacing:-.02em}
 .acc-radio-name{font-size:.68rem;color:var(--ink-s);margin-top:3px}
+/* 후원 물품 종류 선택 */
+.gk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.gk-item{display:flex;align-items:center;gap:8px;border:2px solid var(--line);
+  border-radius:var(--r);padding:11px 13px;cursor:pointer;background:var(--white);
+  transition:all .18s;font-size:.82rem;font-weight:700;color:var(--ink);user-select:none}
+.gk-item:hover{border-color:var(--c3)}
+.gk-item.on{border-color:var(--c1);background:var(--c-light);color:var(--c1)}
+.gk-item input{width:17px;height:17px;accent-color:var(--c1);cursor:pointer;flex-shrink:0}
+.gk-etc{margin-top:9px;display:none}
+.gk-etc.show{display:block}
 .acc-box{background:var(--acc-l);border:1.5px solid var(--acc);
   border-radius:var(--r);padding:14px 16px;margin-bottom:14px;
   display:flex;align-items:flex-start;gap:10px}
@@ -338,25 +348,15 @@ footer a{color:rgba(255,255,255,.7);text-decoration:underline}
         </div>
 
         <div class="fg">
-          <label>입금 계좌 선택 <span class="req">*</span></label>
+          <label>입금 계좌</label>
           <div class="acc-select-grid">
-            <div class="acc-radio-card on" onclick="selectAcc(event.currentTarget,'undesignated')" role="button" tabindex="0">
+            <div class="acc-radio-card on" style="cursor:default">
               <div class="acc-radio-top">💚 비지정후원</div>
               <div class="acc-radio-num">광주은행 1107-021-791537</div>
               <div class="acc-radio-name">예금주: 영암군장애인종합복지관</div>
             </div>
-            <div class="acc-radio-card" onclick="selectAcc(event.currentTarget,'designated')" role="button" tabindex="0">
-              <div class="acc-radio-top">🎯 지정후원</div>
-              <div class="acc-radio-num">광주은행 1107-021-791571</div>
-              <div class="acc-radio-name">예금주: 영암군장애인종합복지관</div>
-            </div>
-            <div class="acc-radio-card" onclick="selectAcc(event.currentTarget,'foundation')" role="button" tabindex="0">
-              <div class="acc-radio-top">🏛️ 법인후원</div>
-              <div class="acc-radio-num">광주은행 672-107-381789</div>
-              <div class="acc-radio-name">예금주: 사회복지법인 전남밀알복지재단</div>
-            </div>
           </div>
-          <p class="fg-hint">비지정후원은 복지관 운영 전반에, 지정후원은 신청 시 안내드리는 특정 사업에, 법인후원은 사회복지법인 전남밀알복지재단으로 후원됩니다.</p>
+          <p class="fg-hint">CMS 정기후원은 <strong>비지정후원</strong>으로만 접수됩니다. 후원금은 복지관 운영 전반에 사용됩니다. 지정후원을 원하시면 위에서 <strong>일시 후원</strong>을 선택해 주세요.</p>
         </div>
       </div>
 
@@ -394,6 +394,21 @@ footer a{color:rgba(255,255,255,.7);text-decoration:underline}
 
       <!-- 물품 후원 -->
       <div id="f-goods" style="display:none">
+        <div class="fg">
+          <label>후원 물품 종류 <span class="req">*</span></label>
+          <div class="gk-grid" id="gkGrid">
+            <label class="gk-item"><input type="checkbox" value="식자재" onchange="gkSync(this)"><span>🍚 식자재</span></label>
+            <label class="gk-item"><input type="checkbox" value="생활용품" onchange="gkSync(this)"><span>🧺 생활용품</span></label>
+            <label class="gk-item"><input type="checkbox" value="사무용품" onchange="gkSync(this)"><span>📎 사무용품</span></label>
+            <label class="gk-item"><input type="checkbox" value="가전제품" onchange="gkSync(this)"><span>🔌 가전제품</span></label>
+            <label class="gk-item"><input type="checkbox" value="의료용품" onchange="gkSync(this)"><span>💊 의료용품(의약품 포함)</span></label>
+            <label class="gk-item"><input type="checkbox" value="기타" id="gkEtcChk" onchange="gkSync(this)"><span>➕ 기타</span></label>
+          </div>
+          <div class="gk-etc" id="gkEtcWrap">
+            <input type="text" id="gkEtcTxt" placeholder="기타 물품 종류를 적어주세요">
+          </div>
+          <p class="fg-hint">해당하는 종류를 모두 선택해 주세요. (중복 선택 가능)</p>
+        </div>
         <div class="fg">
           <label>후원하실 물품 정보 (품목 및 수량) <span class="req">*</span></label>
           <textarea id="goodsInfo" placeholder="예: 쌀 10kg × 2포, 생활용품 세트 5개 등"></textarea>
@@ -635,6 +650,8 @@ function selectType(el,type){
   document.querySelectorAll('.type-card').forEach(c=>c.classList.remove('on'));
   card.classList.add('on');
   curType=type;
+  // 정기후원(CMS)은 비지정후원만 가능합니다
+  if(type==='regular') selAcc='undesignated';
   ['regular','once','goods','vol'].forEach(t=>{
     const e=document.getElementById('f-'+t);
     if(e)e.style.display=t===type?'':'none';
@@ -651,6 +668,28 @@ function setAmt(btn,val){
   document.querySelectorAll('.amt-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on'); selAmt=val;
   document.getElementById('customAmtWrap').style.display=val==='custom'?'':'none';
+}
+
+/* 후원 물품 종류 */
+function gkSync(cb){
+  cb.closest('.gk-item').classList.toggle('on', cb.checked);
+  const etc=document.getElementById('gkEtcChk');
+  const wrap=document.getElementById('gkEtcWrap');
+  if(etc && wrap){
+    wrap.classList.toggle('show', etc.checked);
+    if(!etc.checked) document.getElementById('gkEtcTxt').value='';
+  }
+}
+function gkValues(){
+  const out=[];
+  document.querySelectorAll('#gkGrid input[type=checkbox]').forEach(c=>{
+    if(!c.checked) return;
+    if(c.value==='기타'){
+      const t=(document.getElementById('gkEtcTxt').value||'').trim();
+      out.push(t ? '기타: '+t : '기타');
+    } else out.push(c.value);
+  });
+  return out;
 }
 
 /* 계좌 선택 */
@@ -784,6 +823,10 @@ async function submitForm(){
       if(el && !el.value.trim()){alert(msg);el.focus();return;}
     }
   }
+  if(curType==='goods' && gkValues().length===0){
+    alert('후원 물품 종류를 하나 이상 선택해 주세요.');
+    document.getElementById('gkGrid').scrollIntoView({behavior:'smooth',block:'center'}); return;
+  }
   if(!document.getElementById('agree1').checked){alert('[필수] 개인정보 수집 및 이용에 동의해 주세요.');document.getElementById('agree1').scrollIntoView({behavior:'smooth',block:'center'});return;}
   if(!document.getElementById('agree2').checked){alert('[필수] 개인정보 제3자 제공에 동의해 주세요.');document.getElementById('agree2').scrollIntoView({behavior:'smooth',block:'center'});return;}
   if(isSigEmpty()){alert('서명을 입력해 주세요.');document.getElementById('sigCanvas').scrollIntoView({behavior:'smooth',block:'center'});return;}
@@ -810,7 +853,7 @@ async function submitForm(){
     const amt=selAmt==='custom'
       ?(parseInt(document.getElementById('customAmt').value)||0).toLocaleString()+'원'
       :parseInt(selAmt).toLocaleString()+'원';
-    detail=`<br>• 후원 금액: <strong>매월 ${amt}</strong><br>• 입금 계좌: <strong>${accLabel[selAcc]}</strong><br>• CMS 이체: <strong>${document.getElementById('cmsBank').value.trim()} / ${document.getElementById('cmsDay').value}</strong>`;
+    detail=`<br>• 후원 금액: <strong>매월 ${amt}</strong><br>• 입금 계좌: <strong>${accLabel['undesignated']}</strong><br>• CMS 이체: <strong>${document.getElementById('cmsBank').value.trim()} / ${document.getElementById('cmsDay').value}</strong>`;
   }else if(curType==='once'){
     const amt=parseInt(document.getElementById('onceAmt').value)||0;
     detail=`<br>• 후원 금액: <strong>${amt.toLocaleString()}원</strong><br>• 입금 계좌: <strong>${accLabel[selAcc]}</strong>`;
@@ -837,8 +880,9 @@ async function submitForm(){
     addrType:document.getElementById('dAddrType').value,
     addr:document.getElementById('dAddr').value.trim(),
     amount,
-    account: (curType==='regular'||curType==='once') ? selAcc : '',
-    accountLabel: (curType==='regular'||curType==='once') ? accLabel[selAcc] : '',
+    account: curType==='regular' ? 'undesignated' : (curType==='once' ? selAcc : ''),
+    accountLabel: curType==='regular' ? accLabel['undesignated']
+                : (curType==='once' ? accLabel[selAcc] : ''),
     cmsBank: curType==='regular' ? document.getElementById('cmsBank').value.trim() : '',
     cmsAccount: curType==='regular' ? document.getElementById('cmsAcc').value.trim() : '',
     cmsOwner: curType==='regular' ? document.getElementById('cmsOwner').value.trim() : '',
@@ -846,6 +890,7 @@ async function submitForm(){
     cmsDay: curType==='regular' ? document.getElementById('cmsDay').value : '',
     receiptType,
     goodsInfo: curType==='goods' ? document.getElementById('goodsInfo').value.trim() : '',
+    goodsKinds: curType==='goods' ? gkValues() : [],
     volInfo: curType==='vol' ? document.getElementById('volInfo').value.trim() : '',
     message:document.getElementById('message').value.trim(),
     marketingConsent: document.getElementById('agree3').checked,
