@@ -8,6 +8,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, query }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
+         updatePassword, EmailAuthProvider, reauthenticateWithCredential,
+         setPersistence, browserSessionPersistence }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 const FC = {
   apiKey:"AIzaSyC3bYjomrOrn2-GLuAK6iLZ-22i8i_McDo",
   authDomain:"wolchul-webzine.firebaseapp.com",
@@ -21,6 +25,23 @@ try {
   const db  = getFirestore(app);
   window.__db = db;
   window.__fs = { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, query };
+
+  const auth = getAuth(app);
+  // 탭을 닫으면 로그인도 끝납니다 (공용 PC 대비)
+  setPersistence(auth, browserSessionPersistence).catch(()=>{});
+  window.__auth = auth;
+  window.__au = {
+    signIn: (em,pw) => signInWithEmailAndPassword(auth, em, pw),
+    signOut: () => signOut(auth),
+    onChange: cb => onAuthStateChanged(auth, cb),
+    changePw: async (curPw, newPw) => {
+      const u = auth.currentUser;
+      if(!u) throw new Error('로그인이 필요합니다.');
+      const cred = EmailAuthProvider.credential(u.email, curPw);
+      await reauthenticateWithCredential(u, cred);
+      await updatePassword(u, newPw);
+    }
+  };
 } catch(e){ console.warn("Firebase 오류:", e.message); }
 </script>
 <style>
@@ -230,13 +251,13 @@ input,select,textarea{font-family:inherit}
       <strong>월출어람 관리자</strong>
       <span>영암군장애인종합복지관 웹진</span>
     </div>
-    <div class="fg"><label>아이디</label>
-      <input type="text" id="lid" placeholder="아이디" autocomplete="username"></div>
+    <div class="fg"><label>이메일</label>
+      <input type="email" id="lid" placeholder="관리자 이메일" autocomplete="username"></div>
     <div class="fg"><label>비밀번호</label>
       <input type="password" id="lpw" placeholder="비밀번호" autocomplete="current-password"
         onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn-li" onclick="doLogin()">로그인</button>
-    <div class="lerr" id="lerr">아이디 또는 비밀번호가 올바르지 않습니다.</div>
+    <div class="lerr" id="lerr">이메일 또는 비밀번호가 올바르지 않습니다.</div>
     <div style="text-align:center;margin-top:14px;font-size:.72rem">
       <a href="index.html" style="color:var(--sky)">← 웹진으로 돌아가기</a>
     </div>
@@ -553,7 +574,11 @@ input,select,textarea{font-family:inherit}
           <div class="fg"><label>새 비밀번호</label><input type="password" id="pwn"></div>
           <div class="fg"><label>새 비밀번호 확인</label><input type="password" id="pwn2"></div>
           <button class="btn bs" onclick="chgPw()" style="margin-top:6px">변경하기</button>
-          <p style="font-size:.71rem;color:var(--text-s);margin-top:12px">초기 계정 — ID: <strong>admin</strong> / PW: <strong>wolchul2026</strong></p>
+          <p style="font-size:.71rem;color:var(--text-s);margin-top:12px">
+            로그인 계정: <strong id="whoami">—</strong><br>
+            비밀번호는 구글 서버에 암호화되어 보관되며, 이 페이지 어디에도 저장되지 않습니다.<br>
+            계정 추가·삭제는 Firebase 콘솔 → Authentication → Users 에서 하실 수 있습니다.
+          </p>
         </div>
       </div>
 
@@ -612,23 +637,71 @@ input,select,textarea{font-family:inherit}
 <div class="toast" id="toast"></div>
 
 <script>
-/* 인증 */
-const DI='admin', DP='wolchul2026';
-function creds(){ return {id:ls('adm_id')||DI, pw:ls('adm_pw')||DP}; }
-function isLogged(){ return sessionStorage.getItem('wc_auth')==='1'; }
-function doLogin(){
-  const id=gi('lid').value.trim(), pw=gi('lpw').value, c=creds();
-  if(id===c.id&&pw===c.pw){
-    sessionStorage.setItem('wc_auth','1');
-    gi('lp').style.display='none'; gi('dash').style.display='block'; initDash();
-  } else {
-    gi('lerr').style.display='block';
-    setTimeout(()=>gi('lerr').style.display='none',3000);
+/* ═══════ 인증 (Firebase Authentication) ═══════
+   비밀번호는 이 파일에 없습니다. 구글 서버가 검증합니다.
+   계정 추가/삭제는 Firebase 콘솔 → 빌드 → Authentication → Users 에서 합니다. */
+let AUTH_READY=false;
+
+function isLogged(){ return !!(window.__auth && window.__auth.currentUser); }
+
+function showLoginErr(msg){
+  const e=gi('lerr');
+  e.textContent = msg || '이메일 또는 비밀번호가 올바르지 않습니다.';
+  e.style.display='block';
+  setTimeout(()=>e.style.display='none', 4000);
+}
+
+async function doLogin(){
+  const em=gi('lid').value.trim(), pw=gi('lpw').value;
+  if(!window.__au){ showLoginErr('서버 연결에 실패했습니다. 새로고침 후 다시 시도해 주세요.'); return; }
+  if(!em||!pw){ showLoginErr('이메일과 비밀번호를 모두 입력해 주세요.'); return; }
+  const btn=document.querySelector('.btn-li');
+  if(btn){ btn.disabled=true; btn.textContent='로그인 중...'; }
+  try{
+    await window.__au.signIn(em, pw);
+    gi('lpw').value='';
+  }catch(e){
+    const m={
+      'auth/invalid-email':'이메일 형식이 올바르지 않습니다.',
+      'auth/invalid-credential':'이메일 또는 비밀번호가 올바르지 않습니다.',
+      'auth/wrong-password':'이메일 또는 비밀번호가 올바르지 않습니다.',
+      'auth/user-not-found':'등록되지 않은 계정입니다.',
+      'auth/user-disabled':'사용이 중지된 계정입니다.',
+      'auth/too-many-requests':'시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+      'auth/network-request-failed':'네트워크 연결을 확인해 주세요.'
+    }[e.code] || ('로그인 실패: '+(e.code||e.message));
+    showLoginErr(m);
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='로그인'; }
   }
 }
+
 gi('lid').addEventListener('keydown',e=>{ if(e.key==='Enter') gi('lpw').focus(); });
-function doLogout(){ sessionStorage.removeItem('wc_auth'); sessionStorage.removeItem('wc_lastActive'); location.reload(); }
-if(isLogged()){ gi('lp').style.display='none'; gi('dash').style.display='block'; initDash(); }
+
+function doLogout(){
+  sessionStorage.removeItem('wc_lastActive');
+  if(window.__au) window.__au.signOut().finally(()=>location.reload());
+  else location.reload();
+}
+
+/* 로그인 상태가 바뀔 때마다 화면을 전환합니다 */
+function bindAuth(){
+  if(!window.__au){ setTimeout(bindAuth, 200); return; }
+  window.__au.onChange(user => {
+    if(user){
+      gi('lp').style.display='none';
+      gi('dash').style.display='block';
+      const who=gi('whoami'); if(who) who.textContent=user.email;
+      updateLastActive();
+      if(!AUTH_READY){ AUTH_READY=true; initDash(); }
+    }else{
+      gi('lp').style.display='';
+      gi('dash').style.display='none';
+      AUTH_READY=false;
+    }
+  });
+}
+bindAuth();
 
 /* 자동 로그아웃 — 20분 미사용 시 보안을 위해 자동 로그아웃 */
 const AUTO_LOGOUT_MS = 20 * 60 * 1000; // 20분
@@ -1265,15 +1338,26 @@ function saveSetting(){
   toast('저장되었습니다! 웹진을 새로고침하면 반영됩니다. 🎉','ok');
 }
 
-/* 비밀번호 */
-function chgPw(){
+/* 비밀번호 — 구글 서버에서 처리 */
+async function chgPw(){
   const cur=gi('pwc').value, nw=gi('pwn').value, nw2=gi('pwn2').value;
-  if(cur!==creds().pw){ toast('현재 비밀번호가 틀립니다.','err'); return; }
-  if(nw.length<6){ toast('6자 이상 입력해주세요.','err'); return; }
+  if(!window.__au){ toast('서버 연결에 실패했습니다.','err'); return; }
+  if(!cur){ toast('현재 비밀번호를 입력해 주세요.','err'); return; }
+  if(nw.length<6){ toast('새 비밀번호는 6자 이상이어야 합니다.','err'); return; }
   if(nw!==nw2){ toast('새 비밀번호가 일치하지 않습니다.','err'); return; }
-  localStorage.setItem('adm_pw',nw);
-  ['pwc','pwn','pwn2'].forEach(id=>gi(id).value='');
-  toast('비밀번호가 변경되었습니다.','ok');
+  try{
+    await window.__au.changePw(cur, nw);
+    ['pwc','pwn','pwn2'].forEach(id=>gi(id).value='');
+    toast('비밀번호가 변경되었습니다.','ok');
+  }catch(e){
+    const m={
+      'auth/invalid-credential':'현재 비밀번호가 틀립니다.',
+      'auth/wrong-password':'현재 비밀번호가 틀립니다.',
+      'auth/weak-password':'비밀번호가 너무 단순합니다. 6자 이상으로 정해주세요.',
+      'auth/requires-recent-login':'보안을 위해 다시 로그인한 뒤 변경해 주세요.'
+    }[e.code] || ('변경 실패: '+(e.code||e.message));
+    toast(m,'err');
+  }
 }
 
 /* 카테고리별 이동 */
