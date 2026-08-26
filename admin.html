@@ -1118,13 +1118,33 @@ function printSpForm(){
   const E = v => String(v==null?'':v)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-  const W=1489, H=2105;
+  const W=1489, H=2105, SHEET=900;      // SHEET: 화면에 표시되는 양식 가로 픽셀
   const pc = (x,y) => `left:${(x/W*100).toFixed(3)}%;top:${(y/H*100).toFixed(3)}%`;
   const put = [];
-  const T  = (x,y,txt,size) => { if(txt==null||txt==='')return;
-    put.push(`<div class="f" style="${pc(x,y)};font-size:${size||15}px">${E(txt)}</div>`); };
-  const TC = (x,y,txt,size) => { if(txt==null||txt==='')return;
-    put.push(`<div class="f c" style="${pc(x,y)};font-size:${size||15}px">${E(txt)}</div>`); };
+
+  /* 글자가 칸을 넘지 않도록 글자 크기를 자동으로 줄입니다 */
+  const _cv = document.createElement('canvas').getContext('2d');
+  function fit(txt, maxImgPx, base){
+    const maxDisp = maxImgPx * SHEET / W;
+    let sz = base;
+    while(sz > 7){
+      _cv.font = sz + "px 'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif";
+      if(_cv.measureText(String(txt)).width <= maxDisp) break;
+      sz -= 0.5;
+    }
+    return sz;
+  }
+
+  // 왼쪽 정렬 — x부터 시작, 칸 오른쪽 끝(limit)을 넘으면 축소
+  const T  = (x,y,txt,size,limit) => { if(txt==null||txt==='')return;
+    const sz = limit ? fit(txt, limit - x - 6, size||15) : (size||15);
+    put.push(`<div class="f" style="${pc(x,y)};font-size:${sz}px">${E(txt)}</div>`); };
+
+  // 가운데 정렬 — x가 칸의 중앙, width는 칸 폭
+  const TC = (x,y,txt,size,width) => { if(txt==null||txt==='')return;
+    const sz = width ? fit(txt, width - 12, size||15) : (size||15);
+    put.push(`<div class="f c" style="${pc(x,y)};font-size:${sz}px">${E(txt)}</div>`); };
+
   const CK = (x,y) => put.push(`<div class="ck" style="${pc(x,y)}">✔</div>`);
 
   const d = new Date(s.consentAt || s.createdAt || Date.now());
@@ -1138,11 +1158,12 @@ function printSpForm(){
   const hasCms = !!(s.cmsBank || s.cmsAccount || s.cmsOwner);
 
   /* 후원자 인적사항 — 행 중앙 314 / 371 / 408 / 447 / 493 */
-  T(300, 314, s.name, 17);
-  T(645, 314, (s.jumin && s.jumin!=='-') ? s.jumin : '', 15);
-  T(300, 371, s.phone, 16);
-  T(300, 408, s.email, 15);
-  T(300, 447, s.addr,  15);
+  /* 칸 경계(실측): 성명 283~496 · 주민번호 623~892 · 전화/메일/주소 283~892 */
+  TC(389, 314, s.name, 17, 213);                                   // 성명 — 칸 가운데
+  TC(757, 314, (s.jumin && s.jumin!=='-') ? s.jumin : '', 15, 269); // 주민등록번호
+  T(300, 371, s.phone, 16, 892);
+  T(300, 408, s.email, 15, 892);
+  T(300, 447, s.addr,  15, 892);
 
   /* 후원금 관련 사항 — 네모칸 실측 좌표 */
   if(isReg)  CK(380, 544);
@@ -1162,9 +1183,9 @@ function printSpForm(){
   }
 
   /* CMS 후원금융정보 — 행 660~738 */
-  T(478, 690, s.cmsBank,    14);
-  T(700, 690, s.cmsAccount, 14);
-  T(1060, 690, s.cmsOwner,  14);
+  T(478, 690, s.cmsBank,    14, 585);
+  T(700, 690, s.cmsAccount, 14, 1040);
+  T(1058, 690, s.cmsOwner,  14, 1148);   // 예금주 칸 오른쪽 끝 1152
   TC(1271, 719, s.cmsDay || '', 14);
 
   /* 후원금 종류 */
@@ -1172,11 +1193,11 @@ function printSpForm(){
   if(s.account==='designated')   CK(380, 803);
 
   /* 지정후원내용 — 행 중앙 855 */
-  T(300, 855, (s.account==='designated') ? (s.message||'') : '', 15);
+  T(370, 855, (s.account==='designated') ? (s.message||'') : '', 15, 1330);
 
   /* 후원물품 */
   if(isGoods){ CK(761, 1049); T(880, 1049, s.goodsInfo, 14); }
-  T(440, 1148, isGoods ? (s.goodsInfo||'') : (isVol ? (s.volInfo||'') : ''), 15);
+  T(440, 1148, isGoods ? (s.goodsInfo||'') : (isVol ? (s.volInfo||'') : ''), 15, 1330);
 
   /* 개인정보 동의서 — 동의함 칸 */
   CK(991, 1200);
@@ -1188,12 +1209,12 @@ function printSpForm(){
   TC(654, 1774, yy, 16); TC(740, 1774, mm, 16); TC(835, 1774, dd, 16);
   TC(654, 1932, yy, 16); TC(740, 1932, mm, 16); TC(835, 1932, dd, 16);
 
-  /* 본인(대리인): 라벨이 690에서 끝나므로 그 뒤에 성명 */
-  T(706, 1969, s.name, 17);
+  /* 본인(대리인): 라벨이 690에서 끝남 → 그 뒤 ~1075까지가 성명 자리 */
+  T(706, 1969, s.name, 17, 1070);
 
-  /* 서명 — "(서명 또는 인)"(1080~1248) 바로 위 여백에 */
+  /* 서명 — "(서명 또는 인)" 칸(1080~1248) 안에 꽉 차게 */
   if(s.signature){
-    put.push(`<img class="sig" src="${E(s.signature)}" alt="서명" style="${pc(1164,1938)}">`);
+    put.push(`<img class="sig" src="${E(s.signature)}" alt="서명" style="${pc(1164,1943)}">`);
   }
 
   const bg = new URL('images/form-sponsor.png', location.href).href;
@@ -1219,7 +1240,7 @@ body{font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-seri
 .ck{position:absolute;transform:translate(-50%,-50%);color:#111;
   font-size:17px;font-weight:900;line-height:1}
 img.sig{position:absolute;transform:translate(-50%,-50%);
-  height:34px;width:auto;max-width:140px;object-fit:contain}
+  width:13%;height:2.7%;object-fit:contain}
 @media print{
   body{background:#fff;padding:0}
   .bar{display:none}
