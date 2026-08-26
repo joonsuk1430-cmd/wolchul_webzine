@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="영암군장애인종합복지관 소식지 월출어람 — 따뜻한 이야기를 담은 웹진">
+
+<!-- Open Graph (링크 공유 미리보기) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="월출어람 | 영암군장애인종합복지관">
+<meta property="og:description" content="영암군장애인종합복지관 소식지 월출어람 — 따뜻한 이야기를 담은 웹진">
+<meta property="og:url" content="https://joonsuk1430-cmd.github.io/wolchul/">
+<meta property="og:image" content="https://joonsuk1430-cmd.github.io/wolchul/images/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://joonsuk1430-cmd.github.io/wolchul/images/og-image.jpg">
+
 <title>월출어람 | 영암군장애인종합복지관</title>
 
 <script type="module">
@@ -11,12 +23,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getFirestore, collection, getDocs, onSnapshot, orderBy, query }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const FC = {
-  apiKey: "AIzaSyC3bYjomrOrn2-GLuAK6iLZ-22i8i_McDo",
-  authDomain: "wolchul-webzine.firebaseapp.com",
-  projectId: "wolchul-webzine",
-  storageBucket: "wolchul-webzine.firebasestorage.app",
-  messagingSenderId: "467284560910",
-  appId: "1:467284560910:web:3efd073f2fe55aaaf3405f"
+  apiKey:"AIzaSyC3bYjomrOrn2-GLuAK6iLZ-22i8i_McDo",
+  authDomain:"wolchul-webzine.firebaseapp.com",
+  projectId:"wolchul-webzine",
+  storageBucket:"wolchul-webzine.firebasestorage.app",
+  messagingSenderId:"467284560910",
+  appId:"1:467284560910:web:3efd073f2fe55aaaf3405f"
 };
 window.__loadArts = async function() {
   try {
@@ -222,6 +234,14 @@ img{max-width:100%}
 .card-img{height:160px;display:flex;align-items:center;justify-content:center;
   font-size:2.8rem;position:relative;overflow:hidden}
 .feat-photo,.card-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* 세로 사진은 잘리지 않도록 원본 비율 그대로 표시 */
+.feat-photo.fit-contain,.card-photo.fit-contain{object-fit:contain}
+/* 사진 없는 기사: 이모지 없이 분류 표시만 하고 곧바로 본문 텍스트 */
+.card-noimg{padding:14px 16px 0;display:flex}
+.card-noimg .card-badge-inline{background:var(--c-light);color:var(--c1);
+  font-size:.62rem;font-weight:800;padding:3px 8px;border-radius:4px;
+  letter-spacing:.05em;border:1px solid var(--c-pale)}
+.feat.no-img{grid-template-columns:1fr}
 .card-badge{position:absolute;top:10px;left:10px;background:var(--white);
   color:var(--c1);font-size:.62rem;font-weight:800;padding:3px 8px;
   border-radius:4px;letter-spacing:.05em;border:1px solid var(--c-pale)}
@@ -278,6 +298,22 @@ img{max-width:100%}
   transition:all .18s;width:fit-content}
 .btn-donor:hover{background:var(--c4)}
 
+/* ── 후원 유형 안내 ── */
+.dtype-wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto 52px;padding:0 32px}
+.dtype-eyebrow{color:var(--c4);font-size:.75rem;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;margin-bottom:10px}
+.dtype-wrap h2{font-size:2rem;font-weight:900;color:#fff;letter-spacing:-.03em;margin-bottom:8px}
+.dtype-leaflet{margin-top:28px;text-align:center}
+.dtype-leaflet a{display:inline-block;background:#fff;border-radius:var(--r-l);
+  padding:10px;box-shadow:0 8px 30px rgba(0,0,0,.3);transition:transform .2s;max-width:560px;width:100%}
+.dtype-leaflet a:hover{transform:translateY(-4px)}
+.dtype-leaflet img{width:100%;display:block;border-radius:calc(var(--r-l) - 4px)}
+.dtype-leaflet small{display:block;margin-top:12px;color:rgba(255,255,255,.55);font-size:.75rem}
+@media(max-width:720px){
+  .dtype-wrap{padding:0 20px;margin-bottom:40px}
+  .dtype-wrap h2{font-size:1.5rem}
+}
+
 /* ── 모달 ── */
 .mov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;
   overflow-y:auto;padding:20px;align-items:flex-start;justify-content:center}
@@ -321,7 +357,7 @@ img{max-width:100%}
   background:#111;margin-bottom:22px}
 .car-view{width:100%;aspect-ratio:4/3;display:flex;
   align-items:center;justify-content:center}
-.car-view img{width:100%;height:100%;object-fit:cover;display:block}
+.car-view img{width:100%;height:100%;object-fit:contain;display:block}
 .car-btn{position:absolute;top:50%;transform:translateY(-50%);
   width:44px;height:44px;border-radius:50%;border:none;
   background:var(--c1);color:#fff;font-size:1.5rem;line-height:1;
@@ -353,17 +389,17 @@ img{max-width:100%}
 footer{background:#0d2818;color:rgba(255,255,255,.65);padding:52px 0 28px}
 .ft-in{max-width:1280px;margin:0 auto;padding:0 32px;
   display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:32px}
-.ft-logo{font-size:1.05rem;font-weight:900;color:#fff;margin-bottom:4px}
-.ft-name{font-size:.68rem;color:rgba(255,255,255,.45);margin-bottom:12px;letter-spacing:.06em;text-transform:uppercase}
-.ft-info{font-size:.74rem;line-height:2.1}
-.ft-col h4{font-size:.78rem;font-weight:800;color:#fff;margin-bottom:12px;
+.ft-logo{font-size:1.25rem;font-weight:900;color:#fff;margin-bottom:4px}
+.ft-name{font-size:.82rem;color:rgba(255,255,255,.45);margin-bottom:12px;letter-spacing:.06em;text-transform:uppercase}
+.ft-info{font-size:.92rem;line-height:2.1}
+.ft-col h4{font-size:.95rem;font-weight:800;color:#fff;margin-bottom:12px;
   letter-spacing:.06em;text-transform:uppercase}
 .ft-col ul{list-style:none}
-.ft-col ul li{font-size:.74rem;line-height:2.2}
+.ft-col ul li{font-size:.92rem;line-height:2.2}
 .ft-col ul li a:hover{color:var(--c4)}
 .ft-acc{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
   border-radius:var(--r);padding:10px 14px;margin-top:10px;
-  font-size:.75rem;color:var(--c4);font-weight:700}
+  font-size:.92rem;color:var(--c4);font-weight:700}
 /* 푸터 SNS·QR */
 .ft-sns{max-width:1280px;margin:34px auto 0;padding:0 32px;
   display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -372,17 +408,19 @@ footer{background:#0d2818;color:rgba(255,255,255,.65);padding:52px 0 28px}
   transition:all .18s}
 .sns-card:hover{background:rgba(255,255,255,.12);border-color:var(--c4)}
 .sns-head{display:flex;align-items:center;gap:11px;flex:1;
-  font-size:.82rem;font-weight:800;color:#fff;line-height:1.45}
-.sns-head small{font-size:.68rem;font-weight:500;color:rgba(255,255,255,.55)}
+  font-size:.98rem;font-weight:800;color:#fff;line-height:1.45}
+.sns-head small{font-size:.82rem;font-weight:500;color:rgba(255,255,255,.55)}
 .sns-ico{width:40px;height:40px;border-radius:10px;background:var(--c2);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
 .sns-ico svg{width:22px;height:22px}
 .sns-ico.insta{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)}
 .sns-ico.fb{background:#1877f2}
+.sns-ico.logo{background:#fff;overflow:hidden}
+.sns-ico.logo img{width:34px;height:34px;object-fit:contain}
 .sns-card img{width:76px;height:76px;border-radius:8px;background:#fff;padding:4px;flex-shrink:0}
 @media(max-width:760px){.ft-sns{grid-template-columns:1fr}}
 .ft-line{max-width:1280px;margin:28px auto 0;padding:20px 32px 0;
-  border-top:1px solid rgba(255,255,255,.08);font-size:.68rem;color:rgba(255,255,255,.3);
+  border-top:1px solid rgba(255,255,255,.08);font-size:.8rem;color:rgba(255,255,255,.4);
   display:flex;justify-content:space-between;align-items:center}
 
 /* ── 오프라인 배너 ── */
@@ -460,7 +498,7 @@ footer{background:#0d2818;color:rgba(255,255,255,.65);padding:52px 0 28px}
 
 <!-- 상단 바 -->
 <div class="topbar">
-  <span>📍 전라남도 영암군 영암읍 오리정길 37</span>
+  <span>📍 전남광주통합특별시 영암군 영암읍 오리정길 37</span>
   <span>📞 061-470-6743</span>
   <div class="tb-right">
     <a href="admin.html">관리자</a>
@@ -539,7 +577,6 @@ footer{background:#0d2818;color:rgba(255,255,255,.65);padding:52px 0 28px}
     <button class="btn-clr" id="clrBtn" onclick="clearSearch()">✕ 초기화</button>
     <div class="filter-tags">
       <button class="ftag on" onclick="setTag('all',this)">전체</button>
-      <button class="ftag" onclick="setTag('발자취',this)">발자취</button>
       <button class="ftag" onclick="setTag('함께한 이야기',this)">함께한 이야기</button>
       <button class="ftag" onclick="setTag('공모사업',this)">공모사업</button>
       <button class="ftag" onclick="setTag('후원봉사',this)">후원·봉사</button>
@@ -590,35 +627,19 @@ footer{background:#0d2818;color:rgba(255,255,255,.65);padding:52px 0 28px}
   </div>
 
   <!-- 후원 -->
+  <!-- 후원 안내 (리플렛) -->
   <div class="donor" id="donor">
-    <div class="donor-in">
-      <div class="donor-left">
-        <div class="sec-eyebrow" style="color:var(--c4)">Donation</div>
-        <h2>따뜻한 나눔에<br>함께해 주세요</h2>
-        <p>여러분의 소중한 후원이 영암군 장애인의<br>더 나은 삶을 만들어갑니다.<br>연말정산 기부금 영수증이 자동 발급됩니다.</p>
-        <button class="btn-donor" onclick="location.href='sponsor.html'" style="margin-top:24px">💚 후원 신청하기 →</button>
-      </div>
-      <div class="donor-right">
-        <div class="acc-card">
-          <div class="acc-card-ico">🏦</div>
-          <div>
-            <p id="ftAcc1">비지정후원 · 광주은행 1107-021-791537</p>
-            <span>예금주: 영암군장애인종합복지관</span>
-          </div>
-        </div>
-        <div class="acc-card">
-          <div class="acc-card-ico">🏦</div>
-          <div>
-            <p id="ftAcc2">지정후원 · 광주은행 1107-021-791571</p>
-            <span>예금주: 영암군장애인종합복지관</span>
-          </div>
-        </div>
-        <div class="acc-card">
-          <div class="acc-card-ico">📞</div>
-          <div>
-            <p>후원 문의</p>
-            <span>061-470-6743 | yasg2025@naver.com</span>
-          </div>
+    <div class="dtype-wrap" style="margin-bottom:0">
+      <div class="dtype-eyebrow">Donation Guide</div>
+      <h2>후원 안내</h2>
+      <!-- 후원 안내 리플렛 -->
+      <div class="dtype-leaflet">
+        <a href="images/donation-leaflet.jpg" target="_blank" rel="noopener" aria-label="후원 안내 리플렛 크게 보기">
+          <img src="images/donation-leaflet.jpg" alt="후원 안내 리플렛 — 후원 유형(정기·일시·비지정·지정·자동이체·CMS·물품), 후원금 계좌, 문의 안내" loading="lazy">
+        </a>
+        <small>이미지를 클릭하면 크게 볼 수 있습니다.</small>
+        <div style="margin-top:20px">
+          <button class="btn-donor" onclick="location.href='sponsor.html'">💚 후원 신청하기 →</button>
         </div>
       </div>
     </div>
@@ -673,7 +694,7 @@ footer{background:#0d2818;color:rgba(255,255,255,.65);padding:52px 0 28px}
       <div class="ft-logo" id="ftTitle">월출어람</div>
       <div class="ft-name">Yeongam Welfare Center Webzine</div>
       <div class="ft-info">
-        📍 전라남도 영암군 영암읍 오리정길 37<br>
+        📍 전남광주통합특별시 영암군 영암읍 오리정길 37<br>
         📞 061-470-6743 &nbsp;|&nbsp; 📠 061-470-6769<br>
         ✉ yasg2025@naver.com &nbsp;|&nbsp; 🌐 www.yajb.org
       </div>
@@ -691,14 +712,15 @@ footer{background:#0d2818;color:rgba(255,255,255,.65);padding:52px 0 28px}
       <h4>후원 계좌</h4>
       <div class="ft-acc">비지정: 광주은행 1107-021-791537</div>
       <div class="ft-acc" style="margin-top:6px">지정: 광주은행 1107-021-791571</div>
+      <div class="ft-acc" style="margin-top:6px">법인: 광주은행 672-107-381789</div>
     </div>
   </div>
   <!-- SNS · QR -->
   <div class="ft-sns">
     <a class="sns-card" href="https://m.site.naver.com/1LJ9q" target="_blank" rel="noopener">
       <div class="sns-head">
-        <span class="sns-ico" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7.03 2 3 6.03 3 11c0 4.09 2.73 7.55 6.47 8.64-.02-.73-.01-1.61.18-2.4.21-.85 1.36-5.77 1.36-5.77s-.34-.68-.34-1.68c0-1.58.91-2.76 2.05-2.76.97 0 1.44.73 1.44 1.6 0 .97-.62 2.43-.94 3.78-.27 1.13.57 2.05 1.68 2.05 2.02 0 3.38-2.59 3.38-5.66 0-2.33-1.57-4.08-4.43-4.08-3.23 0-5.24 2.41-5.24 5.1 0 .93.27 1.58.7 2.09.2.23.22.33.15.6l-.21.86c-.07.26-.28.35-.52.26-1.45-.59-2.12-2.18-2.12-3.96 0-2.94 2.48-6.47 7.41-6.47 3.96 0 6.56 2.87 6.56 5.94 0 4.07-2.26 7.11-5.6 7.11-1.12 0-2.17-.6-2.53-1.29l-.69 2.73c-.25.9-.74 1.81-1.18 2.51.89.26 1.82.4 2.8.4 4.97 0 9-4.03 9-9s-4.03-9-9-9z" style="display:none"/><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 2a7 7 0 110 14 7 7 0 010-14zm-3 4h6v2H9V9zm0 4h6v2H9v-2z"/></svg>
+        <span class="sns-ico logo" aria-hidden="true">
+          <img src="images/logo.png" alt="" loading="lazy">
         </span>
         <span>홈페이지<br><small>www.yajb.org</small></span>
       </div>
@@ -992,6 +1014,11 @@ function thumbOf(a){
   return m ? m[1] : null;
 }
 
+/* 세로 사진(높이>너비)은 잘리지 않도록 원본 비율로 표시 */
+function fitThumb(im){
+  if(im.naturalHeight > im.naturalWidth) im.classList.add('fit-contain');
+}
+
 function render() {
   const list = filtered();
   const showFeat = curTag==='all' && !q;
@@ -1005,11 +1032,11 @@ function render() {
     const cbg = CBGMAP[featArt.cat] || '#d8f3dc';
     const cc  = CCMAP[featArt.cat]  || '#2d6a4f';
     const ft = thumbOf(featArt);
+    fc.classList.toggle('no-img', !ft);
     fc.innerHTML = `
-      <div class="feat-img" style="background:linear-gradient(135deg,${cbg},${cbg}88)">
-        ${ft ? `<img class="feat-photo" src="${ft}" alt="" loading="lazy">`
-             : `<span style="font-size:5rem">${featArt.emoji||'📄'}</span>`}
-      </div>
+      ${ft ? `<div class="feat-img" style="background:linear-gradient(135deg,${cbg},${cbg}88)">
+        <img class="feat-photo" src="${ft}" alt="" loading="lazy" onload="fitThumb(this)">
+      </div>` : ``}
       <div class="feat-body">
         <div class="feat-cat" style="background:${cbg};color:${cc};border-color:${cbg}">${dispCat(featArt.cat)}</div>
         <h2>${featArt.title}</h2>
@@ -1048,10 +1075,12 @@ function render() {
     return `<div class="card" role="listitem" tabindex="0"
       onclick="openModal('${a.id}')" onkeydown="if(event.key==='Enter')openModal('${a.id}')"
       aria-label="${dispCat(a.cat)}: ${a.title}">
-      <div class="card-img" style="background:linear-gradient(135deg,${cbg},${cbg}66)">
-        ${thumbOf(a) ? `<img class="card-photo" src="${thumbOf(a)}" alt="" loading="lazy">` : `<span>${a.emoji||'📄'}</span>`}
+      ${thumbOf(a) ? `<div class="card-img" style="background:linear-gradient(135deg,${cbg},${cbg}66)">
+        <img class="card-photo" src="${thumbOf(a)}" alt="" loading="lazy" onload="fitThumb(this)">
         <span class="card-badge" style="color:${cc};border-color:${cbg}">${dispCat(a.cat)}</span>
-      </div>
+      </div>` : `<div class="card-noimg">
+        <span class="card-badge-inline" style="color:${cc}">${dispCat(a.cat)}</span>
+      </div>`}
       <div class="card-body">
         <h3>${a.title}</h3>
         <p>${a.summary}</p>
@@ -1258,6 +1287,7 @@ function applySettings(){
     // 후원 계좌
     if(s.acc1){const e=document.getElementById('ftAcc1');if(e)e.textContent='비지정후원 · '+s.acc1;}
     if(s.acc2){const e=document.getElementById('ftAcc2');if(e)e.textContent='지정후원 · '+s.acc2;}
+    if(s.acc3){const e=document.getElementById('ftAcc3');if(e)e.textContent='법인후원 · '+s.acc3;}
     // 주소/전화 상단바
     if(s.addr){const e=document.querySelector('.topbar span');if(e)e.innerHTML='📍 '+s.addr;}
     if(s.tel){const spans=document.querySelectorAll('.topbar span');if(spans[1])spans[1].innerHTML='📞 '+s.tel;}
