@@ -194,17 +194,36 @@ img{max-width:100%}
 .ftag:hover{border-color:var(--c1);color:var(--c1)}
 .ftag.on{background:var(--c1);border-color:var(--c1);color:#fff}
 
-/* 월별 필터 */
+/* 월별 필터 (드롭다운) */
 .month-row{width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   border-top:1px dashed var(--line);padding-top:11px;margin-top:3px}
 .month-row.hide{display:none}
-.month-lbl{font-size:.74rem;font-weight:800;color:var(--ink-s);flex-shrink:0}
-.month-tags{display:flex;gap:6px;flex-wrap:wrap}
-.mtag{border:1.5px solid var(--line);background:var(--white);color:var(--ink-m);
-  border-radius:20px;padding:4px 14px;font-size:.76rem;font-weight:700;transition:all .18s}
-.mtag:hover{border-color:var(--acc);color:var(--acc)}
-.mtag.on{background:var(--acc);border-color:var(--acc);color:#fff}
-.mtag .mcnt{font-size:.68rem;opacity:.65;margin-left:4px;font-weight:600}
+.msel{position:relative}
+.msel-btn{display:inline-flex;align-items:center;gap:8px;min-width:170px;
+  border:1.5px solid var(--line);background:var(--white);color:var(--ink);
+  border-radius:8px;padding:7px 12px;font-size:.8rem;font-weight:700;transition:all .18s}
+.msel-btn:hover{border-color:var(--acc)}
+.msel.open .msel-btn{border-color:var(--acc);background:var(--acc-l)}
+.msel-cur{flex:1;text-align:left;white-space:nowrap}
+.msel-arw{width:16px;height:16px;fill:var(--ink-s);flex-shrink:0;transition:transform .22s}
+.msel.open .msel-arw{transform:rotate(180deg);fill:var(--acc)}
+.msel-list{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;
+  background:var(--white);border:1.5px solid var(--line);border-radius:10px;
+  box-shadow:0 10px 28px rgba(0,0,0,.14);padding:5px;z-index:400;
+  max-height:0;overflow:hidden;opacity:0;visibility:hidden;
+  transition:max-height .28s ease, opacity .18s ease, visibility .28s}
+.msel.open .msel-list{max-height:290px;overflow-y:auto;opacity:1;visibility:visible}
+.mopt{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;
+  border:none;background:none;color:var(--ink-m);text-align:left;
+  border-radius:7px;padding:8px 11px;font-size:.79rem;font-weight:600;white-space:nowrap}
+.mopt:hover{background:var(--acc-l);color:var(--acc)}
+.mopt.on{background:var(--acc);color:#fff}
+.mopt .mcnt{font-size:.7rem;opacity:.7;font-weight:700}
+.mopt.on .mcnt{opacity:.9}
+.msel-div{height:1px;background:var(--line);margin:4px 6px}
+
+/* 스티키 바에 가려지지 않도록 여백 확보 */
+#articles{scroll-margin-top:210px}
 
 /* ── 특집 ── */
 .feat-wrap{margin-bottom:48px}
@@ -597,8 +616,14 @@ footer{background:#0d2818;color:rgba(255,255,255,.65);padding:52px 0 28px}
 
     <!-- 월별 -->
     <div class="month-row hide" id="monthRow">
-      <span class="month-lbl">📅 월별</span>
-      <div class="month-tags" id="monthTags"></div>
+      <div class="msel" id="msel">
+        <button class="msel-btn" id="mselBtn" onclick="toggleMonth(event)" aria-haspopup="listbox" aria-expanded="false">
+          <span>📅</span>
+          <span class="msel-cur" id="mselCur">전체 기간</span>
+          <svg class="msel-arw" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <div class="msel-list" id="mselList" role="listbox"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1034,46 +1059,91 @@ function filtered() {
   });
 }
 
-/* 등록된 기사의 월만 모아 버튼을 만듭니다 */
+/* 등록된 기사의 월만 모아 드롭다운 목록을 만듭니다 */
+function monthLabel(k){
+  const [y,m] = k.split('-');
+  return `${y}년 ${+m}월`;
+}
+
 function buildMonths(){
   const cnt = {};
   ARTS.forEach(a => { const k = monthKey(a); if(k) cnt[k] = (cnt[k]||0)+1; });
-  const keys = Object.keys(cnt).sort().reverse();   // 최신 월이 왼쪽
+  const keys = Object.keys(cnt).sort().reverse();   // 최신 월이 위로
   const sig  = keys.join(',');
-  if(sig === monthSig) return;                      // 달라진 게 없으면 그대로 둠
-  monthSig = sig;
 
-  const row = document.getElementById('monthRow');
-  const box = document.getElementById('monthTags');
-  if(!row || !box) return;
+  const row  = document.getElementById('monthRow');
+  const list = document.getElementById('mselList');
+  if(!row || !list) return;
 
-  // 월이 하나뿐이거나 없으면 월별 줄 자체를 숨깁니다
-  if(keys.length < 2){ row.classList.add('hide'); curMonth='all'; box.innerHTML=''; return; }
-  row.classList.remove('hide');
+  if(sig !== monthSig){
+    monthSig = sig;
 
-  // 선택해둔 월이 사라졌으면 전체로 되돌립니다
-  if(curMonth!=='all' && !keys.includes(curMonth)) curMonth='all';
+    // 월이 하나뿐이거나 없으면 월별 줄 자체를 숨깁니다
+    if(keys.length < 2){ row.classList.add('hide'); curMonth='all'; list.innerHTML=''; return; }
+    row.classList.remove('hide');
 
-  const oneYear = new Set(keys.map(k => k.slice(0,4))).size === 1;
-  const label = k => {
-    const [y,m] = k.split('-');
-    return oneYear ? `${+m}월` : `${y.slice(2)}년 ${+m}월`;
-  };
+    // 선택해둔 월이 사라졌으면 전체로 되돌립니다
+    if(curMonth!=='all' && !keys.includes(curMonth)) curMonth='all';
 
-  let html = `<button class="mtag${curMonth==='all'?' on':''}" onclick="setMonth('all',this)">전체</button>`;
-  keys.forEach(k => {
-    html += `<button class="mtag${curMonth===k?' on':''}" onclick="setMonth('${k}',this)">`
-          + `${label(k)}<span class="mcnt">${cnt[k]}</span></button>`;
-  });
-  box.innerHTML = html;
+    const total = ARTS.length;
+    let html = `<button class="mopt" role="option" onclick="setMonth('all')">`
+             + `<span>전체 기간</span><span class="mcnt">${total}건</span></button>`
+             + `<div class="msel-div"></div>`;
+    keys.forEach(k => {
+      html += `<button class="mopt" role="option" onclick="setMonth('${k}')">`
+            + `<span>${monthLabel(k)}</span><span class="mcnt">${cnt[k]}건</span></button>`;
+    });
+    list.innerHTML = html;
+  }
+
+  syncMonthUI();
 }
 
-function setMonth(m, btn){
+/* 현재 선택 상태를 버튼 글씨와 목록에 반영 */
+function syncMonthUI(){
+  const cur = document.getElementById('mselCur');
+  if(cur) cur.textContent = curMonth==='all' ? '전체 기간' : monthLabel(curMonth);
+  const opts = document.querySelectorAll('#mselList .mopt');
+  const keys = ['all'].concat(monthSig ? monthSig.split(',') : []);
+  opts.forEach((b,i) => b.classList.toggle('on', keys[i] === curMonth));
+}
+
+function toggleMonth(e){
+  if(e) e.stopPropagation();
+  const w = document.getElementById('msel');
+  if(!w) return;
+  const open = w.classList.toggle('open');
+  document.getElementById('mselBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function closeMonth(){
+  const w = document.getElementById('msel');
+  if(!w) return;
+  w.classList.remove('open');
+  const b = document.getElementById('mselBtn');
+  if(b) b.setAttribute('aria-expanded','false');
+}
+
+// 바깥을 누르거나 ESC를 누르면 닫힙니다
+document.addEventListener('click', closeMonth);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeMonth(); });
+
+function setMonth(m){
   curMonth = m; visible = 9;
-  document.querySelectorAll('.mtag').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
+  closeMonth();
   render();
-  document.getElementById('articles').scrollIntoView({behavior:'smooth', block:'start'});
+  scrollToArticles();
+}
+
+/* 위쪽 고정 바에 가려지지 않게 높이를 계산해서 스크롤 */
+function scrollToArticles(){
+  const target = document.getElementById('articles');
+  if(!target) return;
+  const hd  = document.getElementById('hd');
+  const fb  = document.querySelector('.filter-bar');
+  const off = (hd ? hd.offsetHeight : 0) + (fb ? fb.offsetHeight : 0) + 16;
+  const y   = target.getBoundingClientRect().top + window.pageYOffset - off;
+  window.scrollTo({ top: Math.max(y, 0), behavior: 'smooth' });
 }
 
 function thumbOf(a){
@@ -1179,8 +1249,7 @@ function onSearch() {
 function clearSearch() {
   q = ''; document.getElementById('srch').value = '';
   document.getElementById('clrBtn').style.display = 'none';
-  curMonth = 'all';
-  document.querySelectorAll('.mtag').forEach((b,i) => b.classList.toggle('on', i===0));
+  curMonth = 'all'; syncMonthUI();
   visible = 9; render();
 }
 
