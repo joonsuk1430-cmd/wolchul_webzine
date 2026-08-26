@@ -132,19 +132,43 @@ input,select,textarea{font-family:inherit}
 .chip{display:inline-block;border-radius:9px;padding:2px 8px;font-size:.66rem;font-weight:800}
 
 /* 후원 신청 상세 모달 */
-.dov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:20px}
+.dov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;
+  align-items:center;justify-content:center;padding:24px;overflow-y:auto}
 .dov.open{display:flex}
-.dob{background:var(--white);border-radius:16px;max-width:520px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.2);overflow:hidden}
-.doh{background:linear-gradient(135deg,var(--gold),#c07800);color:#fff;padding:20px 22px;position:relative}
-.doh h3{font-size:1rem;font-weight:900}
-.doh p{font-size:.75rem;opacity:.85;margin-top:4px}
-.dx{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:.9rem}
-.doc{padding:22px}
-.drow{display:flex;gap:0;border-bottom:1px solid var(--border);padding:10px 0}
+.dob{background:var(--white);border-radius:16px;max-width:880px;width:100%;
+  box-shadow:0 8px 40px rgba(0,0,0,.2);overflow:hidden;
+  max-height:calc(100vh - 48px);display:flex;flex-direction:column}
+.doh{background:linear-gradient(135deg,var(--gold),#c07800);color:#fff;
+  padding:22px 24px;position:relative;flex-shrink:0}
+.doh h3{font-size:1.15rem;font-weight:900}
+.doh p{font-size:.85rem;opacity:.9;margin-top:5px}
+.dx{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.2);border:none;
+  color:#fff;width:34px;height:34px;border-radius:50%;font-size:1.05rem}
+.dx:hover{background:rgba(255,255,255,.35)}
+/* ★ 내용이 길면 이 영역만 스크롤됩니다 */
+.doc{padding:22px 26px;overflow-y:auto;flex:1 1 auto;min-height:0;
+  overscroll-behavior:contain}
+.doc::-webkit-scrollbar{width:11px}
+.doc::-webkit-scrollbar-track{background:var(--bg);border-radius:8px}
+.doc::-webkit-scrollbar-thumb{background:#c3ccd4;border-radius:8px;border:2px solid var(--bg)}
+.doc::-webkit-scrollbar-thumb:hover{background:#9aa7b2}
+.drow{display:flex;gap:16px;align-items:flex-start;
+  border-bottom:1px solid var(--border);padding:13px 0}
 .drow:last-child{border-bottom:none}
-.dk{font-size:.75rem;font-weight:700;color:var(--text-s);min-width:100px}
-.dv{font-size:.82rem;color:var(--text);font-weight:600;flex:1}
-.dft{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.dk{font-size:.9rem;font-weight:700;color:var(--text-s);min-width:150px;flex-shrink:0;line-height:1.6}
+.dv{font-size:1rem;color:var(--text);font-weight:600;flex:1;line-height:1.7;
+  word-break:break-word;white-space:pre-wrap}
+.dft{padding:16px 24px;border-top:1px solid var(--border);
+  display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;background:var(--white)}
+
+@media(max-width:640px){
+  .dov{padding:12px}
+  .dob{max-height:calc(100vh - 24px)}
+  .doc{padding:16px 18px}
+  .drow{flex-direction:column;gap:4px;padding:11px 0}
+  .dk{min-width:0;font-size:.82rem}
+  .dv{font-size:.95rem}
+}
 
 /* 에디터 */
 .ew{background:var(--white);border-radius:var(--r);padding:24px;box-shadow:var(--sh)}
@@ -1051,19 +1075,36 @@ function openSpDetail(id){
     ['상태', s.status||'신청'],
   );
 
+  const esc = v => String(v==null?'':v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
   const secHtml=(title,rows)=>
-    `<div style="font-size:.72rem;font-weight:800;color:var(--gold);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)">${title}</div>`
-    + rows.map(([k,v])=>`<div class="drow"><div class="dk">${k}</div><div class="dv">${v}</div></div>`).join('');
+    `<div style="font-size:.88rem;font-weight:800;color:var(--gold);margin:22px 0 8px;padding-bottom:7px;border-bottom:2px solid var(--border)">${title}</div>`
+    + rows.map(([k,v])=>`<div class="drow"><div class="dk">${esc(k)}</div><div class="dv">${esc(v)}</div></div>`).join('');
 
   gi('dContent').innerHTML =
-    '<div style="background:var(--gold-l);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:8px 12px;font-size:.71rem;color:#8a5a00;margin-bottom:4px">⚠️ 개인정보입니다. 업무 목적 외 열람·저장·유출을 금지합니다.</div>'
+    '<div style="background:var(--gold-l);border-left:4px solid var(--gold);border-radius:0 8px 8px 0;padding:12px 16px;font-size:.85rem;color:#8a5a00;margin-bottom:6px;line-height:1.6">⚠️ 개인정보입니다. 업무 목적 외 열람·저장·유출을 금지합니다.</div>'
     + secHtml('1️⃣ 신청 내용', sec1)
     + secHtml('2️⃣ 신청인(기부자) 정보', sec2)
     + secHtml('3️⃣ 납부 방법 및 영수증·동의', sec3);
   gi('spDetail').classList.add('open');
+  gi('dContent').scrollTop = 0;              // 항상 맨 위부터 보이도록
+  document.body.style.overflow = 'hidden';   // 뒤쪽 화면이 같이 스크롤되지 않게
 }
 
-function closeSpDetail(){ gi('spDetail').classList.remove('open'); curSpId=null; }
+function closeSpDetail(){
+  gi('spDetail').classList.remove('open');
+  document.body.style.overflow = '';
+  curSpId=null;
+}
+
+// 바깥의 어두운 곳을 클릭하거나 ESC를 누르면 닫힙니다
+document.addEventListener('click', e => {
+  if(e.target && e.target.id === 'spDetail') closeSpDetail();
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && gi('spDetail') && gi('spDetail').classList.contains('open')) closeSpDetail();
+});
 
 async function updateSpStatus(){
   if(!curSpId)return;
