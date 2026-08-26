@@ -491,7 +491,7 @@ input,select,textarea{font-family:inherit}
         </div>
         <table class="tbl" id="spTbl">
           <thead><tr>
-            <th>No</th><th>신청일</th><th>이름</th><th>연락처</th>
+            <th>No</th><th>신청일시</th><th>이름</th><th>연락처</th>
             <th>유형</th><th>금액</th><th>상태</th><th>관리</th>
           </tr></thead>
           <tbody id="spBody"></tbody>
@@ -1011,7 +1011,7 @@ function rSpTbl(){
   gi('spEmpty').style.display='none';
   gi('spBody').innerHTML=list.map((s,i)=>{
     const status=s.status||'신청';
-    const date=(s.createdAt||s.date||'').toString().substring(0,10).replace(/-/g,'.');
+    const date=spWhen(s);
     const amt=s.amount?parseInt(s.amount).toLocaleString()+'원':'—';
     const dispName = spMaskOn ? maskName(s.name) : (s.name||'—');
     const dispPhone = spMaskOn ? maskPhone(s.phone) : (s.phone||'—');
@@ -1028,11 +1028,20 @@ function rSpTbl(){
   }).join('');
 }
 
+/* 신청 일시를 "2026.08.26 14:35" 형태로 표시 */
+function spWhen(s, withTime){
+  const raw = s.createdAt || s.date || '';
+  const d = new Date(raw);
+  if(isNaN(d)) return String(raw).substring(0,10).replace(/-/g,'.');
+  const p = n => String(n).padStart(2,'0');
+  const day = `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())}`;
+  return withTime === false ? day : `${day} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 function openSpDetail(id){
   const s=SPONSORS.find(x=>x.id===id); if(!s)return;
   curSpId=id;
-  const date=(s.createdAt||s.date||'').toString().substring(0,10).replace(/-/g,'.');
-  gi('dh-date').textContent='신청일: '+date;
+  gi('dh-date').textContent='신청일시: '+spWhen(s);
   gi('spStatusSel').value=s.status||'신청';
   const RECEIPT_LABEL={personal:'개인용 (기부금 영수증 발행)',org:'사업자/단체용 (기부금 영수증 발행)',none:'발행 불필요'};
   const jumin=(s.jumin&&s.jumin!=='-')?s.jumin:'—';
@@ -1100,39 +1109,98 @@ function openSpDetail(id){
 }
 
 
-/* ═══════ 후원신청서 출력 (한글 양식 그대로) ═══════ */
+/* ═══════ 후원신청서 출력 — 원본 PDF 양식 위에 값을 얹는 방식 ═══════
+   좌표는 원본 이미지(1489×2105 기준)를 백분율로 환산한 값입니다. */
 function printSpForm(){
   const s = SPONSORS.find(x => x.id === curSpId);
   if(!s){ toast('신청 정보를 찾을 수 없습니다.','err'); return; }
 
   const E = v => String(v==null?'':v)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const cb = on => on ? '☑' : '☐';
 
-  // 접수일
+  const W=1489, H=2105;                       // 원본 이미지 픽셀 크기
+  const px = (x,y) => `left:${(x/W*100).toFixed(3)}%;top:${(y/H*100).toFixed(3)}%`;
+  const put = [];
+  // 글자 얹기
+  const T = (x,y,txt,size,extra) => {
+    if(txt==null || txt==='') return;
+    put.push(`<div class="f" style="${px(x,y)};font-size:${size||15}px;${extra||''}">${E(txt)}</div>`);
+  };
+  // 체크 표시 얹기 (네모칸 위에 겹쳐 그림)
+  const CK = (x,y) => put.push(`<div class="ck" style="${px(x,y)}">✔</div>`);
+
   const d = new Date(s.consentAt || s.createdAt || Date.now());
-  const yy = isNaN(d) ? '' : d.getFullYear();
-  const mm = isNaN(d) ? '' : (d.getMonth()+1);
-  const dd = isNaN(d) ? '' : d.getDate();
+  const ok = !isNaN(d);
+  const yy = ok ? String(d.getFullYear()).slice(2) : '';
+  const mm = ok ? (d.getMonth()+1) : '';
+  const dd = ok ? d.getDate() : '';
 
-  // 후원기간 / 후원방법
-  const isReg  = s.type === 'regular';
-  const isOnce = s.type === 'once';
-  const isGoods= s.type === 'goods';
-  const isVol  = s.type === 'vol';
+  const isReg=s.type==='regular', isOnce=s.type==='once',
+        isGoods=s.type==='goods', isVol=s.type==='vol';
   const hasCms = !!(s.cmsBank || s.cmsAccount || s.cmsOwner);
 
-  // 후원금액 — 정해진 금액칸에 해당하면 체크, 아니면 기타
+  /* ── 후원자 인적사항 ── */
+  T(300, 300, s.name,  17);          // 성명(상호명)
+  T(650, 300, (s.jumin && s.jumin!=='-') ? s.jumin : '', 15);  // 주민등록번호
+  T(300, 372, s.phone, 16);          // 전화번호
+  T(300, 414, s.email, 15);          // E-mail
+  T(300, 452, s.addr,  15);          // 주소
+
+  /* ── 후원금 관련 사항 ── */
+  if(isReg)  CK(371, 542);           // 정기후원
+  if(isOnce) CK(553, 542);           // 일회성
+
+  if(isReg && !hasCms) CK(371, 597); // 통장입금
+  if(isReg &&  hasCms) CK(553, 597); // CMS
+  if(isOnce)           CK(901, 597); // 직접전달
+
   const amtNum = parseInt(String(s.amount||'').replace(/[^0-9]/g,'')) || 0;
-  const preset = {10000:'a1', 20000:'a2', 30000:'a3', 50000:'a5'}[amtNum] || '';
-  const etcAmt = preset ? '' : (amtNum ? amtNum.toLocaleString() : '');
+  const slot = {10000:368, 20000:485, 30000:601, 50000:718}[amtNum];
+  if(slot) CK(slot, 643);
+  else if(amtNum){
+    CK(835, 643);                                        // 기타
+    T(1035, 645, amtNum.toLocaleString(), 15);           // 일금 ___원
+    T(1255, 645, amtNum.toLocaleString(), 15);           // (₩ ___원)
+  }
 
-  const undes = s.account === 'undesignated';
-  const desig = s.account === 'designated';
+  /* CMS 후원금융정보 */
+  T(462, 696, s.cmsBank,    15);
+  T(680, 696, s.cmsAccount, 15);
+  T(1030, 722, s.cmsOwner,  14);
+  T(1240, 722, s.cmsDay || '', 14);   // 매월 [ ] 일
 
-  const sigImg = s.signature
-    ? `<img src="${E(s.signature)}" alt="서명" class="sig">`
-    : `<span class="nosig">(서명 없음)</span>`;
+  /* 후원금 종류 */
+  if(s.account==='undesignated') CK(378, 766);
+  if(s.account==='designated')   CK(378, 810);
+
+  /* 지정후원내용 */
+  T(300, 862, (s.account==='designated') ? (s.message||'') : '', 14);
+
+  /* ── 후원물품 관련 사항 ── */
+  if(isGoods){
+    CK(760, 1049);                                   // 기타( )
+    T(880, 1052, s.goodsInfo, 14);
+  }
+  T(440, 1105, isGoods ? (s.goodsInfo||'') : (isVol ? (s.volInfo||'') : ''), 14);
+
+  /* ── 개인정보 동의서 (동의함에 체크) ── */
+  CK(985, 1198);                       // 필수정보
+  if(isReg) CK(985, 1249);             // CMS정보
+  CK(985, 1300);                       // 민감정보
+
+  /* ── 날짜 2곳 ── */
+  T(645, 1772, yy, 16); T(752, 1772, mm, 16); T(838, 1772, dd, 16);
+  T(645, 1932, yy, 16); T(752, 1932, mm, 16); T(838, 1932, dd, 16);
+
+  /* ── 본인(대리인) 옆 성명 + 서명 ── */
+  T(700, 1965, s.name, 17, 'font-weight:600');
+
+  if(s.signature){
+    // "(서명 또는 인)" 칸 위에 서명 이미지를 크기 맞춰 얹습니다
+    put.push(`<img class="sig" src="${E(s.signature)}" alt="서명" style="${px(1150,1943)}">`);
+  }
+
+  const base = new URL('images/form-sponsor.png', location.href).href;
 
   const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
 <title>후원신청서 — ${E(s.name||'')}</title>
@@ -1140,39 +1208,27 @@ function printSpForm(){
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;
   background:#e9ecef;padding:20px;color:#000}
-.bar{max-width:800px;margin:0 auto 16px;display:flex;gap:8px;align-items:center;
+.bar{max-width:900px;margin:0 auto 16px;display:flex;gap:8px;align-items:center;
   background:#fff;border-radius:10px;padding:12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .bar b{font-size:.9rem;flex:1}
 .bar button{border:none;border-radius:7px;padding:9px 18px;font-size:.85rem;
   font-weight:700;cursor:pointer;font-family:inherit}
 .pbtn{background:#2d88b5;color:#fff}
 .cbtn{background:#eee;color:#444}
-.page{width:210mm;min-height:297mm;margin:0 auto;background:#fff;padding:13mm 12mm;
+.sheet{position:relative;width:900px;margin:0 auto;background:#fff;
   box-shadow:0 4px 20px rgba(0,0,0,.15)}
-.hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.hd .t1{font-size:11pt;color:#c05a8a;font-weight:700}
-.hd .t2{font-size:19pt;font-weight:900;letter-spacing:-.5px}
-table{width:100%;border-collapse:collapse;table-layout:fixed}
-td,th{border:1px solid #000;padding:3px 5px;font-size:9.5pt;vertical-align:middle;
-  word-break:break-all;height:24px}
-.sec{background:#e8e8e8;text-align:center;font-weight:800;font-size:10.5pt;letter-spacing:6px}
-.lbl{background:#f2f2f2;text-align:center;font-weight:700;font-size:9pt}
-.ctr{text-align:center}
-.sm{font-size:8.5pt}
-.note{font-size:8.5pt;padding:4px 5px}
-.agree{font-size:9pt;line-height:1.65;padding:7px 8px}
-.agree b{font-size:9.5pt}
-.dline{text-align:center;font-size:10.5pt;padding:9px 0;letter-spacing:2px}
-.sline{text-align:right;font-size:10pt;padding:6px 10px 10px;position:relative}
-.sig{height:52px;vertical-align:middle;margin:0 6px -16px}
-.nosig{color:#999;font-size:9pt}
-.vert{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:3px;
-  font-weight:700;font-size:9pt;text-align:center}
+.sheet img.bg{display:block;width:100%;height:auto}
+.f{position:absolute;transform:translateY(-50%);white-space:nowrap;
+  color:#111;line-height:1}
+.ck{position:absolute;transform:translate(-1px,-50%);color:#0b3d91;
+  font-size:16px;font-weight:900;line-height:1}
+img.sig{position:absolute;transform:translate(-50%,-50%);
+  height:38px;width:auto;max-width:145px;object-fit:contain;opacity:.92}
 @media print{
   body{background:#fff;padding:0}
   .bar{display:none}
-  .page{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
-  @page{size:A4;margin:11mm 10mm}
+  .sheet{width:100%;box-shadow:none;margin:0}
+  @page{size:A4;margin:0}
 }
 </style></head><body>
 
@@ -1182,105 +1238,13 @@ td,th{border:1px solid #000;padding:3px 5px;font-size:9.5pt;vertical-align:middl
   <button class="cbtn" onclick="window.close()">닫기</button>
 </div>
 
-<div class="page">
-  <div class="hd">
-    <div>
-      <div class="t1">사회복지법인 전남밀알복지재단</div>
-      <div class="t2">영암군장애인종합복지관&nbsp; 후원(CMS)신청서</div>
-    </div>
-  </div>
-
-  <table>
-    <colgroup><col style="width:13%"><col style="width:20%"><col style="width:11%">
-      <col style="width:19%"><col style="width:4%"><col style="width:11%"><col style="width:22%"></colgroup>
-
-    <tr><td class="sec" colspan="4">후원자인적사항</td>
-        <td class="sec" colspan="3">위임장(대리인신청)</td></tr>
-
-    <tr><td class="lbl">성 명<br>(상호명)</td><td>${E(s.name)}</td>
-        <td class="lbl">주민등록<br>번 호</td><td>${E(s.jumin && s.jumin!=='-' ? s.jumin : '')}</td>
-        <td class="vert" rowspan="3">대리인</td>
-        <td class="lbl">성 명</td><td></td></tr>
-
-    <tr><td class="lbl">전화번호</td><td colspan="3">${E(s.phone)}</td>
-        <td class="lbl">생년월일</td><td></td></tr>
-
-    <tr><td class="lbl">E-mail</td><td colspan="3">${E(s.email)}</td>
-        <td class="lbl">관 계</td><td></td></tr>
-
-    <tr><td class="lbl">주 소</td><td colspan="3">${E(s.addr)}</td>
-        <td class="sm" colspan="3">위 사람에게 후원신청에 관한 일체의 권리를 위임합니다.<br>
-        신청인(위임자)　　　　　　(인 또는 서명)</td></tr>
-
-    <tr><td class="sec" colspan="7">후 원 금 관 련 사 항</td></tr>
-
-    <tr><td class="lbl">후원기간</td><td colspan="6">
-      ${cb(isReg)} 정기후원　　${cb(isOnce)} 일회성</td></tr>
-
-    <tr><td class="lbl">후원방법</td><td colspan="6">
-      ${cb(isReg && !hasCms)} 통장입금　${cb(isReg && hasCms)} C M S　${cb(false)} 자동이체　${cb(isOnce)} 직접전달</td></tr>
-
-    <tr><td class="lbl">후원금액</td><td colspan="6">
-      ${cb(preset==='a1')}일만원 ${cb(preset==='a2')}이만원 ${cb(preset==='a3')}삼만원 ${cb(preset==='a5')}오만원
-      ${cb(!!etcAmt)}기타 일금 <u>&nbsp;${E(etcAmt)}&nbsp;</u> 원(₩ <u>&nbsp;${E(etcAmt)}&nbsp;</u> 원)</td></tr>
-
-    <tr><td class="lbl">CMS<br>후원금융정보</td>
-      <td colspan="2">은행명: ${E(s.cmsBank)}</td>
-      <td colspan="2">계좌번호: ${E(s.cmsAccount)}</td>
-      <td>예금주:<br>${E(s.cmsOwner)}</td>
-      <td>이체일:<br>매월 ${E(s.cmsDay)} 일</td></tr>
-
-    <tr><td class="lbl" rowspan="2">후원금종류</td>
-      <td>${cb(undes)} 비지정후원</td>
-      <td colspan="5" class="sm">광주은행 1107-021-791537　　영암군장애인종합복지관</td></tr>
-    <tr><td>${cb(desig)} 지정후원</td>
-      <td colspan="5" class="sm">광주은행 1107-021-791571　　영암군장애인종합복지관</td></tr>
-
-    <tr><td class="lbl">지정후원내용</td><td colspan="6">${E(desig ? (s.message||'') : '')}</td></tr>
-
-    <tr><td class="note" colspan="7">※지정후원 시 후원사항을 상세하게 적어주세요. (예시) 프로그램지원, 물품 구입 등</td></tr>
-
-    <tr><td class="sec" colspan="7">후 원 물 품 관 련 사 항</td></tr>
-
-    <tr><td class="lbl" rowspan="2">후 원 물 품 종 류</td>
-      <td colspan="6">☐ 식자재　☐ 생활용품　☐ 사무용품　☐ 가전제품</td></tr>
-    <tr><td colspan="6">☐ 의료용품(의약품 포함)　${cb(isGoods)} 기타( ${E(isGoods ? (s.goodsInfo||'') : '')} )</td></tr>
-
-    <tr><td class="lbl">후원물품상세내역</td><td colspan="6">${E(isGoods ? (s.goodsInfo||'') : (isVol ? (s.volInfo||'') : ''))}</td></tr>
-
-    <tr><td class="sec" colspan="7">후 원 자 개 인 정 보 동 의 서</td></tr>
-
-    <tr><td colspan="5" class="sm">◎ 필수정보: 성명, 생년월일, 연락처, 주소</td>
-        <td colspan="2" class="sm ctr">☑동의함　☐동의하지 않음</td></tr>
-    <tr><td colspan="5" class="sm">◎ CMS정보(정기후원자만 해당): 은행명, 계좌번호, 예금주명</td>
-        <td colspan="2" class="sm ctr">${cb(isReg)}동의함　${cb(!isReg)}동의하지 않음</td></tr>
-    <tr><td colspan="5" class="sm">◎ 민감정보: 주민등록번호, 사진(CMS출금, 영수증발급용)</td>
-        <td colspan="2" class="sm ctr">☑동의함　☐동의하지 않음</td></tr>
-
-    <tr><td class="agree" colspan="7">
-      <b>영암군장애인종합복지관은 수집한 개인정보를 다음의 목적을 위해 활용합니다.</b><br>
-      ◎ 후원수입, 배분, 관리, 정보제공 등 후원관리 용도 활용<br>
-      ◎ 소식지 배송, 홍보, 마케팅, 자료요청 등 후원관리 목적 외 이용 시<br>
-      ◎ 희망이음 등 정보입력 및 출력, 후원영수증 발급<br>
-      ◎ 후원자(처)의 이름을 소식지 및 복지관 게시판, 홈페이지에 공개<br>
-      ◎ 수집한 개인정보 파일의 보유기간은 수집 목적을 달성한 시점까지이며, 파기를 요청하실 경우
-      절차에 따라 즉시(5일 이내) 파기되어 집니다.<br>
-      ◎ 본인은 위의 내용을 충분히 숙지하였으며, 영암군장애인종합복지관의 보다 나은 서비스제공과
-      정책수립을 위해 개인정보를 수집, 활용, 제공하는 것에 동의합니다.
-      <div class="dline">20 <u>&nbsp;${String(yy).slice(2)}&nbsp;</u> 년 　<u>&nbsp;${mm}&nbsp;</u> 월 　<u>&nbsp;${dd}&nbsp;</u> 일</div>
-      <div class="sline">☐14세 미만　　보호자 또는 동의자　　　　　　　　　　　　(서명 또는 인)</div>
-    </td></tr>
-
-    <tr><td class="agree" colspan="7">
-      상기 본인은 영암군장애인종합복지관의 후원자로서 위와 같이 후원할 것을 약정합니다.
-      <div class="dline">20 <u>&nbsp;${String(yy).slice(2)}&nbsp;</u> 년 　<u>&nbsp;${mm}&nbsp;</u> 월 　<u>&nbsp;${dd}&nbsp;</u> 일</div>
-      <div class="sline">본인(대리인): ${sigImg} <span style="font-size:9.5pt">${E(s.name)}</span>　　(서명 또는 인)</div>
-    </td></tr>
-  </table>
+<div class="sheet">
+  <img class="bg" src="${base}" alt="후원신청서 양식">
+  ${put.join('\n  ')}
 </div>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=900,height=1000,scrollbars=yes');
+  const w = window.open('', '_blank', 'width=980,height=1000,scrollbars=yes');
   if(!w){ toast('팝업이 차단되었습니다. 주소창 오른쪽의 팝업 허용을 켜주세요.','err'); return; }
   w.document.open();
   w.document.write(html);
@@ -1330,10 +1294,10 @@ function exportCsv(){
   const ok = confirm('⚠️ 개인정보 보호 안내\n\n다운로드되는 파일에는 후원자의 이름, 연락처 등 개인정보가 포함됩니다.\n\n- 업무 목적 외 사용을 금지합니다\n- 파일을 외부에 유출하거나 공유하지 마세요\n- 사용 후 안전하게 삭제해 주세요\n\n위 내용에 동의하고 다운로드하시겠습니까?');
   if(!ok) return;
   const RECEIPT_CSV={personal:'개인용',org:'사업자/단체용',none:'발행불필요'};
-  const headers=['신청일','유형','금액','입금계좌','이름','연락처','이메일','팩스','주소구분','주소','주민등록번호/사업자등록번호','CMS금융기관','CMS계좌번호','CMS예금주','예금주생년월일/사업자번호','정기이체일','영수증구분','물품정보','봉사내용','전달말씀','소식수신동의','상태'];
+  const headers=['신청일시','유형','금액','입금계좌','이름','연락처','이메일','팩스','주소구분','주소','주민등록번호/사업자등록번호','CMS금융기관','CMS계좌번호','CMS예금주','예금주생년월일/사업자번호','정기이체일','영수증구분','물품정보','봉사내용','전달말씀','소식수신동의','상태'];
   const c=v=>('"'+String(v==null?'':v).replace(/"/g,'""')+'"');
   const rows=SPONSORS.map(s=>[
-    (s.createdAt||s.date||'').toString().substring(0,10),
+    spWhen(s),
     TYPE_LABEL[s.type]||s.type||'',
     s.amount||'',
     s.accountLabel||'',
