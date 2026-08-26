@@ -1173,7 +1173,9 @@ function printSpForm(){
   if(isReg &&  hasCms) CK(564, 596);
   if(isOnce)           CK(905, 596);
 
-  const amtNum = parseInt(String(s.amount||'').replace(/[^0-9]/g,'')) || 0;
+  // 물품후원·봉사신청은 후원금 항목이 없으므로 금액칸을 비워둡니다
+  const isMoney = isReg || isOnce;
+  const amtNum = isMoney ? (parseInt(String(s.amount||'').replace(/[^0-9]/g,'')) || 0) : 0;
   const slot = {10000:380, 20000:497, 30000:614, 50000:732}[amtNum];
   if(slot) CK(slot, 641);
   else if(amtNum){
@@ -1186,18 +1188,25 @@ function printSpForm(){
   T(478, 690, s.cmsBank,    14, 585);
   T(700, 690, s.cmsAccount, 14, 1040);
   T(1058, 690, s.cmsOwner,  14, 1148);   // 예금주 칸 오른쪽 끝 1152
-  TC(1271, 719, s.cmsDay || '', 14);
+  // "매월 5일" → 숫자 5만 뽑아 "매월 [5] 일" 빈칸에 넣습니다 ("매월 말일"이면 "말")
+  const dayTxt = (function(v){
+    if(!v) return '';
+    const m = String(v).match(/(\d+)/);
+    if(m) return m[1];
+    return /말/.test(v) ? '말' : '';
+  })(s.cmsDay);
+  TC(1271, 721, dayTxt, 14);
 
   /* 후원금 종류 */
-  if(s.account==='undesignated') CK(380, 759);
-  if(s.account==='designated')   CK(380, 803);
+  if(isMoney && s.account==='undesignated') CK(380, 759);
+  if(isMoney && s.account==='designated')   CK(380, 803);
 
   /* 지정후원내용 — 행 중앙 855 */
-  T(370, 855, (s.account==='designated') ? (s.message||'') : '', 15, 1330);
+  T(370, 855, (isMoney && s.account==='designated') ? (s.message||'') : '', 15, 1330);
 
   /* 후원물품 */
   if(isGoods){ CK(761, 1049); T(880, 1049, s.goodsInfo, 14); }
-  T(440, 1148, isGoods ? (s.goodsInfo||'') : (isVol ? (s.volInfo||'') : ''), 15, 1330);
+  T(440, 1096, isGoods ? (s.goodsInfo||'') : (isVol ? (s.volInfo||'') : ''), 15, 1330);
 
   /* 개인정보 동의서 — 동의함 칸 */
   CK(991, 1200);
