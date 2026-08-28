@@ -20,7 +20,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs, onSnapshot, orderBy, query }
+import { getFirestore, collection, getDocs, onSnapshot, doc, getDoc, orderBy, query }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const FC = {
   apiKey:"AIzaSyC3bYjomrOrn2-GLuAK6iLZ-22i8i_McDo",
@@ -30,10 +30,25 @@ const FC = {
   messagingSenderId:"467284560910",
   appId:"1:467284560910:web:3efd073f2fe55aaaf3405f"
 };
+let __app = null, __db = null;
+function __fb(){
+  if(!__app){ __app = initializeApp(FC); __db = getFirestore(__app); }
+  return __db;
+}
+
+/* 관리자 설정(settings/site) 불러오기 */
+window.__loadSettings = async function(){
+  try{
+    const db = __fb();
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000));
+    const snap = await Promise.race([getDoc(doc(db,'settings','site')), timeout]);
+    return snap.exists() ? snap.data() : null;
+  }catch(e){ return null; }
+};
+
 window.__loadArts = async function() {
   try {
-    const app = initializeApp(FC);
-    const db  = getFirestore(app);
+    const db  = __fb();
     const q   = query(collection(db,'articles'), orderBy('date','desc'));
     // 3초 타임아웃 — 초과 시 샘플 데이터로 전환
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000));
@@ -1010,6 +1025,7 @@ window.addEventListener('load', () => {
   document.getElementById('listArea').style.display = '';
   render();
   applySettings();
+  applySettingsFromServer();   // 서버 설정으로 덮어쓰기
 
   // 백그라운드에서 Firebase 로드 시도 (성공하면 자동 교체)
   if(window.__loadArts) {
@@ -1415,9 +1431,19 @@ function openMob(){document.getElementById('mobOv').classList.add('open');docume
 function closeMob(){document.getElementById('mobOv').classList.remove('open');document.body.style.overflow=''}
 
 /* ── admin 설정 반영 ── */
-function applySettings(){
+/* 서버에 저장된 설정을 받아와 화면에 반영합니다 */
+async function applySettingsFromServer(){
   try{
-    const s=JSON.parse(localStorage.getItem('wc_set')||'{}');
+    if(typeof window.__loadSettings !== 'function') return;
+    const s = await window.__loadSettings();
+    if(s) applySettings(s);
+  }catch(e){}
+}
+
+function applySettings(given){
+  try{
+    let s = given;
+    if(!s){ try{ s=JSON.parse(localStorage.getItem('wc_set')||'{}'); }catch{ s={}; } }
     // 소식지 제목
     if(s.title){
       ['siteTitle','ftTitle'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=s.title;});
@@ -1429,15 +1455,19 @@ function applySettings(){
       const mv=document.getElementById('mVol');
       if(mv)mv.textContent=s.vol;
     }
-    // 히어로 메인 제목
-    if(s.heroMain){
+    // 히어로 큰제목 — 1줄 / 2줄 + 강조(초록) 조합
+    const esc = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if(s.heroLine1 || s.heroLine2 || s.heroAccent){
+      const h=document.getElementById('heroH1');
+      if(h){
+        const l1=esc(s.heroLine1), l2=esc(s.heroLine2), ac=esc(s.heroAccent);
+        h.innerHTML = l1 + (l1&&(l2||ac) ? '<br>' : '')
+          + l2 + (l2&&ac ? ' ' : '')
+          + (ac ? '<span class="pt" id="heroAccent">'+ac+'</span>' : '');
+      }
+    } else if(s.heroMain){
       const e=document.getElementById('heroH1');
       if(e)e.innerHTML=s.heroMain;
-    }
-    // 히어로 강조 텍스트 (초록색 부분)
-    if(s.heroAccent){
-      const e=document.getElementById('heroAccent');
-      if(e)e.textContent=s.heroAccent;
     }
     // 히어로 부제목
     if(s.heroDesc){

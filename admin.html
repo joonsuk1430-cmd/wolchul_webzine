@@ -6,7 +6,7 @@
 <title>관리자 | 월출어람 웹진</title>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, query }
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, orderBy, query }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
          updatePassword, EmailAuthProvider, reauthenticateWithCredential,
@@ -24,7 +24,7 @@ try {
   const app = initializeApp(FC);
   const db  = getFirestore(app);
   window.__db = db;
-  window.__fs = { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, orderBy, query };
+  window.__fs = { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, orderBy, query };
 
   const auth = getAuth(app);
   // 탭을 닫으면 로그인도 끝납니다 (공용 PC 대비)
@@ -562,7 +562,15 @@ input,select,textarea{font-family:inherit}
               <input id="svol" placeholder="영암장복 · 2026년 소식지">
             </div>
             <div class="sf">
-              <label>히어로 강조 문구 <small style="color:var(--text-s);font-weight:400">— 초록색으로 표시되는 부분</small></label>
+              <label>메인 큰제목 1번째 줄 <small style="color:var(--text-s);font-weight:400">— 예: 장애인과 함께</small></label>
+              <input id="sheroLine1" placeholder="장애인과 함께">
+            </div>
+            <div class="sf">
+              <label>메인 큰제목 2번째 줄 <small style="color:var(--text-s);font-weight:400">— 흰색 부분. 예: 걷는</small></label>
+              <input id="sheroLine2" placeholder="걷는">
+            </div>
+            <div class="sf">
+              <label>히어로 강조 문구 <small style="color:var(--text-s);font-weight:400">— 2번째 줄 뒤에 붙는 초록색 부분</small></label>
               <input id="sheroAccent" placeholder="따뜻한 길">
             </div>
             <div class="sf">
@@ -1505,7 +1513,19 @@ async function saveArt(){
     toast(isNew?'✅ 새 기사가 등록되었습니다! 웹진을 새로고침하세요.':'✅ 기사가 수정되었습니다! 웹진을 새로고침하세요.','ok');
     setTimeout(()=>go('plist',null),1000);
   }catch(e){
-    toast('❌ 저장 오류: '+e.message,'err');
+    if(e.code === 'permission-denied'){
+      toast('❌ 저장 권한이 없습니다. Firestore 규칙에서 articles의 write를 허용해 주세요.','err');
+      alert('기사를 저장할 권한이 없습니다.\n\n' +
+            'Firebase 콘솔 → Firestore Database → 규칙 탭에서\n' +
+            'articles 항목이 아래와 같은지 확인해 주세요.\n\n' +
+            'match /articles/{doc} {\n' +
+            '  allow read: if true;\n' +
+            '  allow write: if request.auth != null;\n' +
+            '}\n\n' +
+            '(write가 false로 되어 있으면 수정·등록이 모두 막힙니다)');
+    } else {
+      toast('❌ 저장 오류: '+(e.code||e.message),'err');
+    }
     console.error('저장 오류:', e);
   }
 }
@@ -1547,28 +1567,50 @@ async function doDelete(){
   }
 }
 
-/* 설정 */
-function getSetting(){
-  const d={title:'월출어람',vol:'VOL. 2호',addr:'전남광주통합특별시 영암군 영암읍 오리정길 37',
-    tel:'061-470-6743',fax:'061-470-6769',email:'yasg2025@naver.com',web:'www.yajb.org',
-    acc1:'광주은행 1107-021-791537',acc2:'광주은행 1107-021-791571',
-    accName:'영암군장애인종합복지관',donTel:'061-470-6743'};
-  try{ return Object.assign(d,JSON.parse(localStorage.getItem('wc_set')||'{}')); }catch{ return d; }
+/* 설정 — Firestore(settings/site)에 저장해야 방문자에게도 보입니다 */
+const SET_DEFAULT = {
+  title:'월출어람', vol:'VOL. 3호 · 2026년 상반기 소식지',
+  heroMain:'장애인과 함께<br>걷는 <span class="pt" id="heroAccent">따뜻한 길</span>',
+  heroAccent:'따뜻한 길',
+  heroDesc:'사회복지법인 전남밀알복지재단 영암군장애인종합복지관의<br>소식과 이야기를 담은 웹진입니다.',
+  heroLine1:'장애인과 함께', heroLine2:'걷는',
+  addr:'전남광주통합특별시 영암군 영암읍 오리정길 37',
+  tel:'061-470-6743', fax:'061-470-6769', email:'yasg2025@naver.com', web:'www.yajb.org',
+  acc1:'광주은행 1107-021-791537', acc2:'광주은행 1107-021-791571',
+  accName:'영암군장애인종합복지관', donTel:'061-470-6743'
+};
+
+function getSettingLocal(){
+  try{ return Object.assign({}, SET_DEFAULT, JSON.parse(localStorage.getItem('wc_set')||'{}')); }
+  catch{ return Object.assign({}, SET_DEFAULT); }
 }
-function loadSetForm(){
-  const s=getSetting();
+
+async function loadSetForm(){
+  let s = getSettingLocal();
+  // Firestore에 저장된 값이 있으면 그것을 우선합니다
+  if(window.__db && window.__fs && fbOK){
+    try{
+      const {doc,getDoc} = window.__fs;
+      const snap = await getDoc(doc(window.__db,'settings','site'));
+      if(snap.exists()) s = Object.assign(s, snap.data());
+    }catch(e){ console.warn('설정 불러오기 실패:', e.code||e.message); }
+  }
   const sv=(id,val)=>{ const e=gi(id); if(e) e.value=val||''; };
   sv('sttl',s.title); sv('svol',s.vol);
+  sv('sheroLine1',s.heroLine1); sv('sheroLine2',s.heroLine2);
   sv('sheroAccent',s.heroAccent); sv('sheroDesc',s.heroDesc);
   sv('sadr',s.addr); sv('stel',s.tel); sv('sfax',s.fax);
   sv('seml',s.email); sv('sweb',s.web);
   sv('sa1',s.acc1); sv('sa2',s.acc2);
   sv('san',s.accName); sv('sdt',s.donTel);
 }
-function saveSetting(){
+
+async function saveSetting(){
   const s={
     title: gi('sttl')?.value||'',
     vol: gi('svol')?.value||'',
+    heroLine1: gi('sheroLine1')?.value||'',
+    heroLine2: gi('sheroLine2')?.value||'',
     heroAccent: gi('sheroAccent')?.value||'',
     heroDesc: gi('sheroDesc')?.value||'',
     addr: gi('sadr')?.value||'',
@@ -1581,8 +1623,25 @@ function saveSetting(){
     accName: gi('san')?.value||'',
     donTel: gi('sdt')?.value||''
   };
-  localStorage.setItem('wc_set', JSON.stringify(s));
-  toast('저장되었습니다! 웹진을 새로고침하면 반영됩니다. 🎉','ok');
+  localStorage.setItem('wc_set', JSON.stringify(s));   // 관리자 화면용 임시 보관
+
+  if(!(window.__db && window.__fs && fbOK)){
+    toast('⚠️ 서버에 연결되지 않아 이 브라우저에만 저장되었습니다.','err');
+    return;
+  }
+  toast('저장 중...','');
+  try{
+    const {doc,setDoc} = window.__fs;
+    await setDoc(doc(window.__db,'settings','site'), s);
+    toast('✅ 저장되었습니다! 웹진을 새로고침하면 모든 사람에게 반영됩니다.','ok');
+  }catch(e){
+    if(e.code === 'permission-denied'){
+      toast('❌ 권한이 없습니다. Firestore 규칙에 settings 항목을 추가해 주세요.','err');
+    } else {
+      toast('❌ 저장 오류: '+(e.code||e.message),'err');
+    }
+    console.error('설정 저장 오류:', e);
+  }
 }
 
 /* 비밀번호 — 구글 서버에서 처리 */

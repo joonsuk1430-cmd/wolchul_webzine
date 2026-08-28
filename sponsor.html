@@ -467,6 +467,18 @@ footer a{color:rgba(255,255,255,.7);text-decoration:underline}
         <label>주소 <span class="req">*</span> <span style="color:var(--ink-s);font-weight:400">(기부금 영수증 발급·우편 발송에 사용)</span></label>
         <input type="text" id="dAddr" placeholder="주소를 입력해 주세요 (필수)">
       </div>
+      <div class="fg" id="receiptIdWrap">
+        <label>주민등록번호 / 사업자등록번호 <span class="req">*</span></label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="text" id="dBirthFront" placeholder="앞 6자리 (주민) / 사업자번호 앞" maxlength="7"
+            inputmode="numeric" style="flex:1;letter-spacing:.1em;font-family:monospace;font-size:.92rem"
+            oninput="autoMoveFocus(this)">
+          <span style="font-size:1rem;color:var(--ink-s);font-weight:700;flex-shrink:0">—</span>
+          <input type="text" id="dBirthBack1" placeholder="뒷자리 전체 입력" maxlength="7"
+            inputmode="numeric" style="flex:1;letter-spacing:.1em;font-family:monospace;font-size:.92rem">
+        </div>
+        <p class="fg-hint">국세청 기부금 영수증 발급 용도입니다. 주민등록번호는 앞 6자리 — 뒷 7자리, 사업자등록번호는 앞 3자리 — 뒷 7자리로 나눠 입력해 주세요.</p>
+      </div>
     </div>
 
     <!-- 3. 납부 방법 및 동의·서명 -->
@@ -511,7 +523,7 @@ footer a{color:rgba(255,255,255,.7);text-decoration:underline}
       </div>
 
       <!-- 영수증 발급 설정 -->
-      <div class="fg">
+      <div class="fg" id="receiptSetWrap">
         <label>소득공제용 기부금 영수증 발행 설정</label>
         <div class="receipt-grid">
           <div class="receipt-opt on" onclick="selectReceipt(event.currentTarget,'personal')">개인용</div>
@@ -519,18 +531,6 @@ footer a{color:rgba(255,255,255,.7);text-decoration:underline}
           <div class="receipt-opt" onclick="selectReceipt(event.currentTarget,'none')">발행 불필요</div>
         </div>
         <p class="fg-hint" id="receiptHint">개인용 선택 시 주민등록번호 입력이 필요합니다. 뒷 6자리는 수집되지 않으며 <strong>*로 자동 처리</strong>됩니다.</p>
-      </div>
-      <div class="fg" id="receiptIdWrap">
-        <label>주민등록번호 / 사업자등록번호 <span class="req">*</span></label>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="text" id="dBirthFront" placeholder="앞 6자리 (주민) / 사업자번호 앞" maxlength="7"
-            inputmode="numeric" style="flex:1;letter-spacing:.1em;font-family:monospace;font-size:.92rem"
-            oninput="autoMoveFocus(this)">
-          <span style="font-size:1rem;color:var(--ink-s);font-weight:700;flex-shrink:0">—</span>
-          <input type="text" id="dBirthBack1" placeholder="뒷자리 전체 입력" maxlength="7"
-            inputmode="numeric" style="flex:1;letter-spacing:.1em;font-family:monospace;font-size:.92rem">
-        </div>
-        <p class="fg-hint">주민등록번호: 앞 6자리 — 뒷 7자리 / 사업자등록번호: 10자리를 앞 3자리 — 뒷 7자리로 나눠 입력 (국세청 기부금 영수증 발급 용도)</p>
       </div>
 
       <!-- 필수 - 수집·이용 동의 -->
@@ -652,6 +652,7 @@ function selectType(el,type){
   curType=type;
   // 정기후원(CMS)은 비지정후원만 가능합니다
   if(type==='regular') selAcc='undesignated';
+  applyVolMode(type==='vol');
   ['regular','once','goods','vol'].forEach(t=>{
     const e=document.getElementById('f-'+t);
     if(e)e.style.display=t===type?'':'none';
@@ -700,6 +701,24 @@ function selectAcc(el,type){
   selAcc=type;
 }
 
+/* 자원봉사는 기부금이 없으므로 영수증·주민번호 항목을 감춥니다 */
+function applyVolMode(isVol){
+  const setW = document.getElementById('receiptSetWrap');
+  const idW  = document.getElementById('receiptIdWrap');
+  if(setW) setW.style.display = isVol ? 'none' : '';
+  if(idW){
+    if(isVol) idW.style.display = 'none';
+    else idW.style.display = (receiptType === 'none') ? 'none' : '';
+  }
+  if(isVol) receiptType = 'none';
+  else if(receiptType === 'none'){
+    // 봉사에서 다른 유형으로 돌아오면 개인용으로 복원
+    receiptType = 'personal';
+    document.querySelectorAll('.receipt-opt').forEach((c,i)=>c.classList.toggle('on', i===0));
+    if(idW) idW.style.display='';
+  }
+}
+
 /* 영수증 발급 설정 */
 let receiptType='personal';
 function selectReceipt(el,type){
@@ -708,16 +727,18 @@ function selectReceipt(el,type){
   receiptType=type;
   const wrap=document.getElementById('receiptIdWrap');
   const hint=document.getElementById('receiptHint');
+  if(!wrap) return;
   if(type==='none'){
     wrap.style.display='none';
   }else{
     wrap.style.display='';
+    const f=document.getElementById('dBirthFront');
     if(type==='org'){
-      hint.textContent='사업자/단체용 선택 시에는 별도 문의를 통해 사업자등록증 사본을 제출해 주세요.';
-      document.getElementById('dBirth').placeholder='사업자등록번호 (예: 123-45-67890)';
+      if(hint) hint.textContent='사업자/단체용 선택 시에는 별도 문의를 통해 사업자등록증 사본을 제출해 주세요.';
+      if(f) f.placeholder='사업자등록번호 앞 3자리';
     }else{
-      hint.textContent='개인용 선택 시 주민등록번호 입력이 필요합니다. (뒷 6자리는 수집되지 않으며 *로 처리됩니다)';
-      document.getElementById('dBirth').placeholder='예: 19800101 (8자리)';
+      if(hint) hint.textContent='개인용 선택 시 주민등록번호 입력이 필요합니다. (뒷 6자리는 수집되지 않으며 *로 처리됩니다)';
+      if(f) f.placeholder='앞 6자리 (주민) / 사업자번호 앞';
     }
   }
 }
@@ -831,7 +852,7 @@ async function submitForm(){
   if(!document.getElementById('agree2').checked){alert('[필수] 개인정보 제3자 제공에 동의해 주세요.');document.getElementById('agree2').scrollIntoView({behavior:'smooth',block:'center'});return;}
   if(isSigEmpty()){alert('서명을 입력해 주세요.');document.getElementById('sigCanvas').scrollIntoView({behavior:'smooth',block:'center'});return;}
   // 주민등록번호 유효성 체크 (영수증 발행 선택 시)
-  if(receiptType==='personal'){
+  if(receiptType==='personal' && curType!=='vol'){
     const front=document.getElementById('dBirthFront').value.trim();
     const back1=document.getElementById('dBirthBack1').value.trim();
     if(!front || front.length < 3){
