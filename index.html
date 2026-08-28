@@ -46,6 +46,16 @@ window.__loadSettings = async function(){
   }catch(e){ return null; }
 };
 
+/* 디자인 설정(settings/design) 불러오기 */
+window.__loadDesign = async function(){
+  try{
+    const db = __fb();
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000));
+    const snap = await Promise.race([getDoc(doc(db,'settings','design')), timeout]);
+    return snap.exists() ? snap.data() : null;
+  }catch(e){ return null; }
+};
+
 window.__loadArts = async function() {
   try {
     const db  = __fb();
@@ -1025,7 +1035,9 @@ window.addEventListener('load', () => {
   document.getElementById('listArea').style.display = '';
   render();
   applySettings();
+  try{ applyDesign(JSON.parse(localStorage.getItem('wc_design')||'null')); }catch{}
   applySettingsFromServer();   // 서버 설정으로 덮어쓰기
+  applyDesignFromServer();     // 서버 디자인으로 덮어쓰기
 
   // 백그라운드에서 Firebase 로드 시도 (성공하면 자동 교체)
   if(window.__loadArts) {
@@ -1431,6 +1443,63 @@ function openMob(){document.getElementById('mobOv').classList.add('open');docume
 function closeMob(){document.getElementById('mobOv').classList.remove('open');document.body.style.overflow=''}
 
 /* ── admin 설정 반영 ── */
+/* ── 디자인(색상·배경) 적용 ── */
+function patternCSS(kind){
+  const w = 'rgba(255,255,255,.4)';
+  switch(kind){
+    case 'none':  return {img:'none', size:'auto'};
+    case 'dots':  return {img:`radial-gradient(${w} 1.4px, transparent 1.4px)`, size:'22px 22px'};
+    case 'diag':  return {img:`repeating-linear-gradient(45deg, ${w} 0 1px, transparent 1px 14px)`, size:'auto'};
+    case 'wave':  return {img:`radial-gradient(circle at 50% 100%, transparent 12px, ${w} 12px, ${w} 13px, transparent 13px)`, size:'34px 17px'};
+    case 'cross': return {img:`linear-gradient(${w} 1px, transparent 1px), linear-gradient(90deg, ${w} 1px, transparent 1px)`, size:'18px 18px'};
+    default:      return {img:`linear-gradient(${w} 1px, transparent 1px), linear-gradient(90deg, ${w} 1px, transparent 1px)`, size:'40px 40px'};
+  }
+}
+
+function applyDesign(d){
+  if(!d) return;
+  const r = document.documentElement.style;
+  const set = (k,v) => { if(v) r.setProperty(k, v); };
+  set('--c1', d.c1); set('--c2', d.c2); set('--c3', d.c3); set('--c4', d.c4);
+  set('--acc', d.acc);
+  // 연한 배경색은 강조색에서 자동 생성
+  if(d.c4) set('--c-pale', d.c4 + '55');
+  if(d.c4) set('--c-light', d.c4 + '1f');
+  if(d.acc) set('--acc-l', d.acc + '1f');
+
+  // 히어로 배경 (무늬 / 사진)
+  const grid = document.querySelector('.hero-grid');
+  const hbg  = document.querySelector('.hero-bg');
+  if(grid){
+    const p = patternCSS(d.pattern || 'grid');
+    grid.style.backgroundImage = p.img;
+    grid.style.backgroundSize  = p.size;
+    grid.style.opacity = (p.img === 'none') ? '0' : '.06';
+  }
+  if(hbg){
+    if(d.heroImg){
+      const dim = (d.heroDim == null ? 55 : d.heroDim) / 100;
+      hbg.style.backgroundImage =
+        `linear-gradient(rgba(0,0,0,${dim}), rgba(0,0,0,${dim})), url('${d.heroImg}')`;
+      hbg.style.backgroundSize = 'cover, cover';
+      hbg.style.backgroundPosition = 'center, center';
+    } else if(d.c3 && d.c4){
+      hbg.style.backgroundImage =
+        `radial-gradient(ellipse at 20% 50%, ${d.c3}66 0%, transparent 60%),` +
+        `radial-gradient(ellipse at 80% 20%, ${d.c4}33 0%, transparent 50%)`;
+      hbg.style.backgroundSize = 'auto';
+    }
+  }
+}
+
+async function applyDesignFromServer(){
+  try{
+    if(typeof window.__loadDesign !== 'function') return;
+    const d = await window.__loadDesign();
+    if(d){ applyDesign(d); try{ localStorage.setItem('wc_design', JSON.stringify(d)); }catch{} }
+  }catch(e){}
+}
+
 /* 서버에 저장된 설정을 받아와 화면에 반영합니다 */
 async function applySettingsFromServer(){
   try{

@@ -221,6 +221,46 @@ input,select,textarea{font-family:inherit}
 /* 설정 */
 .sg{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .sc{background:var(--white);border-radius:var(--r);padding:20px;box-shadow:var(--sh)}
+/* ── 디자인 꾸미기 ── */
+.dz-prev{position:relative;border-radius:var(--r);overflow:hidden;min-height:280px;
+  display:flex;align-items:center;box-shadow:var(--sh)}
+.dz-prev-bg{position:absolute;inset:0}
+.dz-prev-in{position:relative;z-index:2;padding:34px 38px}
+.dz-tag{display:inline-block;background:rgba(255,255,255,.14);color:rgba(255,255,255,.92);
+  border:1px solid rgba(255,255,255,.22);border-radius:20px;padding:5px 14px;
+  font-size:.7rem;font-weight:700;margin-bottom:14px}
+.dz-h1{font-size:2.1rem;font-weight:900;color:#fff;line-height:1.15;margin-bottom:12px}
+.dz-desc{font-size:.8rem;color:rgba(255,255,255,.8);line-height:1.7;margin-bottom:18px}
+.dz-btns{display:flex;gap:10px}
+.dz-b1{background:#fff;color:#1b4332;border-radius:7px;padding:9px 20px;font-size:.78rem;font-weight:800}
+.dz-b2{border:1.5px solid rgba(255,255,255,.5);color:#fff;border-radius:7px;
+  padding:9px 20px;font-size:.78rem;font-weight:800}
+
+.dz-themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px}
+.dz-th{border:2.5px solid var(--border);border-radius:var(--r);padding:8px;cursor:pointer;
+  background:var(--white);transition:all .16s;text-align:center}
+.dz-th:hover{border-color:var(--sky)}
+.dz-th.on{border-color:var(--navy);box-shadow:0 0 0 3px rgba(45,136,181,.18)}
+.dz-th-bar{display:flex;height:26px;border-radius:5px;overflow:hidden;margin-bottom:6px}
+.dz-th-bar i{flex:1}
+.dz-th-nm{font-size:.71rem;font-weight:800;color:var(--text)}
+
+.dz-colors{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:9px}
+.dz-colors label{display:flex;align-items:center;gap:8px;border:1.5px solid var(--border);
+  border-radius:7px;padding:7px 9px;background:var(--bg)}
+.dz-colors label span{font-size:.7rem;font-weight:700;color:var(--text);line-height:1.35;flex:1}
+.dz-colors label small{font-weight:400;color:var(--text-s);font-size:.64rem}
+.dz-colors input[type=color]{width:36px;height:32px;border:none;background:none;
+  cursor:pointer;padding:0;flex-shrink:0}
+
+.dz-pats{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:9px}
+.dz-pat{border:2.5px solid var(--border);border-radius:7px;cursor:pointer;overflow:hidden;
+  transition:all .16s;background:#2d6a4f}
+.dz-pat:hover{border-color:var(--sky)}
+.dz-pat.on{border-color:var(--navy);box-shadow:0 0 0 3px rgba(45,136,181,.18)}
+.dz-pat-vw{height:46px;position:relative}
+.dz-pat-nm{font-size:.66rem;font-weight:700;color:var(--text);background:var(--white);
+  padding:4px;text-align:center}
 .sc h3{font-size:.84rem;font-weight:800;color:var(--navy);margin-bottom:13px;padding-bottom:9px;border-bottom:1px solid var(--border)}
 .sf{margin-bottom:11px}
 .sf label{display:block;font-size:.71rem;font-weight:700;color:var(--text-m);margin-bottom:4px}
@@ -323,6 +363,7 @@ input,select,textarea{font-family:inherit}
       </div>
       <div class="sb-s">
         <div class="sb-t">설정</div>
+        <button class="sb-b" onclick="go('pdesign',this)">🎨 디자인 꾸미기</button>
         <button class="sb-b" onclick="go('pset',this)">⚙️ 사이트 설정</button>
         <button class="sb-b" onclick="go('ppw',this)">🔒 비밀번호 변경</button>
       </div>
@@ -541,6 +582,69 @@ input,select,textarea{font-family:inherit}
         </div>
         <div id="phStatus" style="font-size:.76rem;color:var(--text-s);margin:6px 0 10px"></div>
         <div id="phGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"></div>
+      </div>
+
+      <!-- 디자인 -->
+      <div class="pn" id="pdesign">
+        <div class="pt">🎨 디자인 꾸미기</div>
+        <div style="background:var(--sky-l);border-left:4px solid var(--sky);border-radius:0 var(--r) var(--r) 0;padding:10px 14px;font-size:.76rem;color:var(--navy);margin-bottom:18px">
+          💡 아래에서 고르면 <strong>바로 아래 미리보기</strong>에 반영됩니다. 마음에 들면 맨 아래 저장을 누르세요.
+        </div>
+
+        <!-- 미리보기 -->
+        <div class="dz-prev" id="dzPrev">
+          <div class="dz-prev-bg" id="dzPrevBg"></div>
+          <div class="dz-prev-in">
+            <div class="dz-tag" id="dzTag">VOL. 3호 · 2026년 상반기 소식지</div>
+            <div class="dz-h1">장애인과 함께<br>걷는 <span id="dzAcc">따뜻한 길</span></div>
+            <div class="dz-desc">사회복지법인 전남밀알복지재단 영암군장애인종합복지관의<br>소식과 이야기를 담은 웹진입니다.</div>
+            <div class="dz-btns"><span class="dz-b1">기사 보기</span><span class="dz-b2">후원 신청 →</span></div>
+          </div>
+        </div>
+
+        <div class="sg" style="margin-top:20px">
+          <!-- 색상 테마 -->
+          <div class="sc">
+            <h3>🎨 색상 테마</h3>
+            <div class="dz-themes" id="dzThemes"></div>
+            <div class="sf" style="margin-top:14px">
+              <label>직접 고르기 <small style="color:var(--text-s);font-weight:400">— 위 테마를 고른 뒤 세부 조정도 가능합니다</small></label>
+              <div class="dz-colors">
+                <label><span>가장 진한색<br><small>헤더·배경</small></span><input type="color" id="dzC1" oninput="dzPreview()"></label>
+                <label><span>진한색<br><small>제목·버튼</small></span><input type="color" id="dzC2" oninput="dzPreview()"></label>
+                <label><span>중간색<br><small>강조선</small></span><input type="color" id="dzC3" oninput="dzPreview()"></label>
+                <label><span>밝은색<br><small>큰제목 강조</small></span><input type="color" id="dzC4" oninput="dzPreview()"></label>
+                <label><span>포인트색<br><small>후원 버튼</small></span><input type="color" id="dzAccC" oninput="dzPreview()"></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 메인 배경 -->
+          <div class="sc">
+            <h3>🖼 메인 화면 배경</h3>
+            <div class="sf">
+              <label>무늬 / 패턴</label>
+              <div class="dz-pats" id="dzPats"></div>
+            </div>
+            <div class="sf" style="margin-top:14px">
+              <label>배경 사진 <small style="color:var(--text-s);font-weight:400">— 비워두면 색상만 사용</small></label>
+              <input id="dzImg" placeholder="images/hero.jpg 또는 https://... 주소" oninput="dzPreview()">
+              <p style="font-size:.71rem;color:var(--text-s);margin-top:6px">
+                GitHub의 <strong>images</strong> 폴더에 사진을 올리고 <strong>images/파일명.jpg</strong> 처럼 적으면 됩니다.
+              </p>
+            </div>
+            <div class="sf" style="margin-top:12px">
+              <label>사진 어둡게 <span id="dzDimV" style="color:var(--text-s);font-weight:400">55%</span>
+                <small style="color:var(--text-s);font-weight:400">— 글씨가 잘 보이도록</small></label>
+              <input type="range" id="dzDim" min="0" max="90" value="55" oninput="dzPreview()" style="width:100%">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn bs" onclick="saveDesign()">💾 디자인 저장하기</button>
+          <button class="btn bo" onclick="resetDesign()">↺ 기본값으로</button>
+        </div>
       </div>
 
       <!-- 설정 -->
@@ -949,6 +1053,7 @@ function go(id,btn){
   if(id==='plist') rTbl();
   if(id==='pdash'){ rDash(); updateFbs(); }
   if(id==='pset') loadSetForm();
+  if(id==='pdesign') loadDesign();
   if(id==='psponsor') rSpTbl();
 }
 
@@ -1564,6 +1669,164 @@ async function doDelete(){
   }catch(e){
     toast('❌ 삭제 오류: '+e.message,'err');
     console.error('삭제 오류 상세:', e);
+  }
+}
+
+
+/* ═══════ 디자인 꾸미기 ═══════ */
+const DZ_THEMES = {
+  green:  {nm:'숲 초록 (기본)', c1:'#1b4332',c2:'#2d6a4f',c3:'#40916c',c4:'#74c69d',acc:'#f77f00'},
+  blue:   {nm:'바다 파랑',     c1:'#12395c',c2:'#1b5e8c',c3:'#2d88b5',c4:'#7ec8e3',acc:'#f77f00'},
+  navy:   {nm:'깊은 남색',     c1:'#1a2a4a',c2:'#2c4270',c3:'#4361a8',c4:'#9db8e8',acc:'#ffb703'},
+  plum:   {nm:'포근 자주',     c1:'#4a1e3d',c2:'#6d2d5a',c3:'#9c4a80',c4:'#e0a7c8',acc:'#f4a261'},
+  brown:  {nm:'따뜻 갈색',     c1:'#4a3520',c2:'#6b4d2e',c3:'#96703f',c4:'#d9b382',acc:'#2d88b5'},
+  teal:   {nm:'청록',          c1:'#123f3f',c2:'#1d6363',c3:'#2e8f8f',c4:'#84d2d2',acc:'#f77f00'},
+  wine:   {nm:'와인',          c1:'#4a1c22',c2:'#6e2c34',c3:'#a04752',c4:'#e6a3ab',acc:'#e9c46a'},
+  charcoal:{nm:'모던 그레이',  c1:'#26292e',c2:'#3c4149',c3:'#5b626e',c4:'#b6bec9',acc:'#f77f00'}
+};
+
+const DZ_PATTERNS = {
+  grid:  '격자',
+  none:  '없음',
+  dots:  '물방울',
+  diag:  '사선',
+  wave:  '물결',
+  cross: '십자'
+};
+
+/* 패턴 CSS — index.html 과 동일한 규칙을 씁니다 */
+function dzPatternCSS(kind){
+  const w = 'rgba(255,255,255,.4)';
+  switch(kind){
+    case 'none':  return {img:'none', size:'auto'};
+    case 'dots':  return {img:`radial-gradient(${w} 1.4px, transparent 1.4px)`, size:'22px 22px'};
+    case 'diag':  return {img:`repeating-linear-gradient(45deg, ${w} 0 1px, transparent 1px 14px)`, size:'auto'};
+    case 'wave':  return {img:`radial-gradient(circle at 50% 100%, transparent 12px, ${w} 12px, ${w} 13px, transparent 13px)`, size:'34px 17px'};
+    case 'cross': return {img:`linear-gradient(${w} 1px, transparent 1px), linear-gradient(90deg, ${w} 1px, transparent 1px)`, size:'18px 18px'};
+    default:      return {img:`linear-gradient(${w} 1px, transparent 1px), linear-gradient(90deg, ${w} 1px, transparent 1px)`, size:'40px 40px'};
+  }
+}
+
+const DZ_DEFAULT = {theme:'green', c1:'#1b4332',c2:'#2d6a4f',c3:'#40916c',c4:'#74c69d',
+  acc:'#f77f00', pattern:'grid', heroImg:'', heroDim:55};
+let dzCur = Object.assign({}, DZ_DEFAULT);
+
+function dzBuildUI(){
+  const tw = gi('dzThemes');
+  if(tw && !tw.dataset.built){
+    tw.innerHTML = Object.entries(DZ_THEMES).map(([k,t])=>
+      `<div class="dz-th" data-k="${k}" onclick="dzPickTheme('${k}')">
+         <div class="dz-th-bar"><i style="background:${t.c1}"></i><i style="background:${t.c2}"></i>
+           <i style="background:${t.c3}"></i><i style="background:${t.c4}"></i><i style="background:${t.acc}"></i></div>
+         <div class="dz-th-nm">${t.nm}</div>
+       </div>`).join('');
+    tw.dataset.built='1';
+  }
+  const pw = gi('dzPats');
+  if(pw && !pw.dataset.built){
+    pw.innerHTML = Object.entries(DZ_PATTERNS).map(([k,nm])=>{
+      const p = dzPatternCSS(k);
+      return `<div class="dz-pat" data-k="${k}" onclick="dzPickPattern('${k}')">
+        <div class="dz-pat-vw" style="background-image:${p.img};background-size:${p.size};opacity:.9"></div>
+        <div class="dz-pat-nm">${nm}</div></div>`;
+    }).join('');
+    pw.dataset.built='1';
+  }
+}
+
+function dzPickTheme(k){
+  const t = DZ_THEMES[k]; if(!t) return;
+  dzCur.theme=k; dzCur.c1=t.c1; dzCur.c2=t.c2; dzCur.c3=t.c3; dzCur.c4=t.c4; dzCur.acc=t.acc;
+  dzFillInputs(); dzPreview();
+}
+function dzPickPattern(k){ dzCur.pattern=k; dzPreview(); }
+
+function dzFillInputs(){
+  const v=(id,val)=>{ const e=gi(id); if(e) e.value=val; };
+  v('dzC1',dzCur.c1); v('dzC2',dzCur.c2); v('dzC3',dzCur.c3);
+  v('dzC4',dzCur.c4); v('dzAccC',dzCur.acc);
+  v('dzImg',dzCur.heroImg||'');
+  const d=gi('dzDim'); if(d) d.value=dzCur.heroDim;
+}
+
+function dzPreview(){
+  const g=id=>gi(id)?gi(id).value:null;
+  if(g('dzC1')){
+    dzCur.c1=g('dzC1'); dzCur.c2=g('dzC2'); dzCur.c3=g('dzC3');
+    dzCur.c4=g('dzC4'); dzCur.acc=g('dzAccC');
+    dzCur.heroImg=(g('dzImg')||'').trim();
+    dzCur.heroDim=parseInt(g('dzDim'))||0;
+  }
+  const dv=gi('dzDimV'); if(dv) dv.textContent=dzCur.heroDim+'%';
+
+  // 선택 표시
+  document.querySelectorAll('#dzThemes .dz-th').forEach(e=>
+    e.classList.toggle('on', e.dataset.k===dzCur.theme));
+  document.querySelectorAll('#dzPats .dz-pat').forEach(e=>
+    e.classList.toggle('on', e.dataset.k===dzCur.pattern));
+
+  // 미리보기 배경
+  const bg = gi('dzPrevBg');
+  if(bg){
+    const p = dzPatternCSS(dzCur.pattern);
+    const layers=[], sizes=[];
+    if(p.img!=='none'){ layers.push(p.img); sizes.push(p.size); }
+    if(dzCur.heroImg){
+      layers.push(`linear-gradient(rgba(0,0,0,${dzCur.heroDim/100}), rgba(0,0,0,${dzCur.heroDim/100}))`);
+      sizes.push('cover');
+      layers.push(`url('${dzCur.heroImg}')`); sizes.push('cover');
+    } else {
+      layers.push(`radial-gradient(ellipse at 20% 50%, ${dzCur.c3}66 0%, transparent 60%)`); sizes.push('auto');
+      layers.push(`radial-gradient(ellipse at 80% 20%, ${dzCur.c4}33 0%, transparent 50%)`); sizes.push('auto');
+    }
+    bg.style.backgroundColor = dzCur.c1;
+    bg.style.backgroundImage = layers.join(',');
+    bg.style.backgroundSize  = sizes.join(',');
+    bg.style.backgroundPosition='center';
+    bg.style.opacity='1';
+  }
+  const acc=gi('dzAcc'); if(acc) acc.style.color=dzCur.c4;
+  const b1=document.querySelector('.dz-b1'); if(b1) b1.style.color=dzCur.c1;
+}
+
+function resetDesign(){
+  if(!confirm('디자인을 기본값(숲 초록)으로 되돌릴까요?')) return;
+  dzCur = Object.assign({}, DZ_DEFAULT);
+  dzFillInputs(); dzPreview();
+  toast('기본값으로 되돌렸습니다. 저장을 눌러야 반영됩니다.','ok');
+}
+
+async function loadDesign(){
+  dzBuildUI();
+  let d = Object.assign({}, DZ_DEFAULT);
+  try{ d = Object.assign(d, JSON.parse(localStorage.getItem('wc_design')||'{}')); }catch{}
+  if(window.__db && window.__fs && fbOK){
+    try{
+      const {doc,getDoc}=window.__fs;
+      const snap=await getDoc(doc(window.__db,'settings','design'));
+      if(snap.exists()) d=Object.assign(d, snap.data());
+    }catch(e){ console.warn('디자인 불러오기 실패:', e.code||e.message); }
+  }
+  dzCur=d; dzFillInputs(); dzPreview();
+}
+
+async function saveDesign(){
+  dzPreview();
+  const d={...dzCur};
+  localStorage.setItem('wc_design', JSON.stringify(d));
+  if(!(window.__db && window.__fs && fbOK)){
+    toast('⚠️ 서버에 연결되지 않아 이 브라우저에만 저장되었습니다.','err'); return;
+  }
+  toast('저장 중...','');
+  try{
+    const {doc,setDoc}=window.__fs;
+    await setDoc(doc(window.__db,'settings','design'), d);
+    toast('✅ 디자인이 저장되었습니다! 웹진을 새로고침해 보세요.','ok');
+  }catch(e){
+    if(e.code==='permission-denied')
+      toast('❌ 권한이 없습니다. Firestore 규칙에 settings 항목을 추가해 주세요.','err');
+    else toast('❌ 저장 오류: '+(e.code||e.message),'err');
+    console.error(e);
   }
 }
 
